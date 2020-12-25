@@ -1,6 +1,7 @@
-# Preservica frontend
+# Pre-ingest frontend
 
-A Vue.js and PrimeVue frontend towards [the pre-ingest tooling](https://github.com/noord-hollandsarchief/preingest).
+A Vue.js and PrimeVue frontend towards the API that runs the
+[the pre-ingest tooling](https://github.com/noord-hollandsarchief/preingest).
 
 ## Development
 
@@ -21,8 +22,8 @@ This project was bootstrapped with Vue CLI v4.5.9, using Vue 3 preview, TypeScri
 - Where do you prefer placing config for Babel, ESLint, etc.? In dedicated config files
 - Pick the package manager to use when installing dependencies: Yarn
 
-Next, upgraded Prettier to fix errors in the generated code, and configured `.editorconfig` and Prettier
-rules.
+Next, upgraded Prettier to fix errors in the generated code and configured `.editorconfig` and Prettier
+rules, and added `vue.config.js` to set the app's title.
 
 ### Yarn
 
