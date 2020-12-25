@@ -1,6 +1,7 @@
 {
   "name": "preingest-frontend",
   "version": "0.1.0",
+  "author": "Noord-Hollands Archief",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
