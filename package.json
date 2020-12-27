@@ -11,6 +11,12 @@
   },
   "dependencies": {
     "core-js": "^3.6.5",
+    "dayjs": "^1.9.7",
+    "filesize": "^6.1.0",
+    "mitt": "^2.1.0",
+    "primeflex": "^2.0.0",
+    "primeicons": "^4.1.0",
+    "primevue": "^3.1.1",
     "vue": "^3.0.0",
     "vue-router": "^4.0.0-0",
     "vuex": "^4.0.0-0"

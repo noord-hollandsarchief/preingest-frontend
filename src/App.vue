@@ -1,10 +1,29 @@
 <template>
   <div id="nav">
-    <router-link to="/">Home</router-link> |
-    <router-link to="/about">About</router-link>
+    <router-link to="/">start</router-link> |
+    <router-link to="/help">help</router-link>
   </div>
-  <router-view />
+  <Suspense>
+    <template #default>
+      <router-view />
+    </template>
+    <template #fallback>
+      <div>Een ogenblik...</div>
+    </template>
+  </Suspense>
+  <Toast />
+  <ConfirmDialog />
 </template>
+
+<script lang="ts">
+import { provideApi } from '@/plugins/PreingestApi';
+
+export default {
+  setup() {
+    provideApi();
+  },
+};
+</script>
 
 <style lang="scss">
 #app {
@@ -26,5 +45,15 @@
       color: #42b983;
     }
   }
+}
+
+.pre {
+  display: block;
+  font-family: Monaco, 'lucida console', Consolas, monospace;
+  font-size: 0.7em;
+  overflow: scroll;
+  text-align: left;
+  unicode-bidi: embed;
+  white-space: pre;
 }
 </style>
