@@ -33,7 +33,7 @@ export type TriggerActionResult = {
 };
 
 export type ActionResult = {
-  // TODO Change API to use consitent casing
+  // TODO Change API to use consistent casing
   SessionId: string;
   Code: string;
   ActionName: string;
@@ -41,6 +41,10 @@ export type ActionResult = {
   CollectionItem: string;
   Message: string;
   CreationTimestamp: string;
+  InGreenList?: boolean;
+  // Too bad, TS2589: Type instantiation is excessively deep and possibly infinite.
+  // [index: string]: AnyJson;
+  // item?: JsonMap;
 };
 
 export class PreingestApiService {

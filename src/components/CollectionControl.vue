@@ -169,6 +169,12 @@ export default defineComponent({
                     step.state =
                       Array.isArray(step.result) && step.result.length > 0 ? 'ERROR' : 'SUCCESS';
                     break;
+                  case 'GreenList':
+                    step.state =
+                      Array.isArray(step.result) && step.result.some((r) => r.InGreenList === false)
+                        ? 'ERROR'
+                        : 'SUCCESS';
+                    break;
                 }
               });
             } else {
