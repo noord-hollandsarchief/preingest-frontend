@@ -8,6 +8,7 @@
       @row-select="onStepSelect"
       @row-unselect="onStepUnselect"
       class="p-datatable-sm"
+      :rowClass="rowClass"
     >
       <!-- TODO hide expander if not applicable -->
       <!-- TODO this increases the table height, despite class="p-datatable-sm" -->
@@ -18,7 +19,8 @@
       <Column field="name" header="Actie" />
       <Column field="state" header="Status">
         <template #body="slotProps">
-          <Tag v-if="slotProps.data.selected" severity="success">wachten</Tag>
+          <Tag v-if="slotProps.data.fixedSelected" severity="success">gereed</Tag>
+          <Tag v-else-if="slotProps.data.selected" severity="info">wachten</Tag>
         </template>
       </Column>
 
@@ -60,7 +62,10 @@ import { DependentItem, getDependencies, getDependents } from '@/utils/dependent
 
 interface Step extends DependentItem {
   name: string;
+  // The initial or current selection state
   selected?: boolean;
+  // A fixed value for selected (false forces the step to always be non-selected)
+  fixedSelected?: boolean;
   result?: string;
 }
 
@@ -78,8 +83,8 @@ export default defineComponent({
 
     // This assumes all dependencies are declared before they're needed
     const steps = ref<Step[]>([
-      { id: 'check', dependsOn: [], name: 'Checksum berekenen' },
-      { id: 'unpack', dependsOn: [], name: 'Archief uitpakken' },
+      { id: 'check', dependsOn: [], name: 'Checksum berekenen', fixedSelected: true },
+      { id: 'unpack', dependsOn: [], name: 'Archief uitpakken', fixedSelected: true },
       { id: 'virus', dependsOn: ['unpack'], name: 'Viruscontrole' },
       { id: 'filenames', dependsOn: ['unpack'], name: 'Bestandsnamen controleren' },
       {
@@ -114,6 +119,11 @@ export default defineComponent({
       },
     ]);
 
+    // Force `selected` to match `fixSelected`, in case the definition above is not consistent; this
+    // does not also force-select/unselect any dependencies or dependents
+    steps.value.forEach((step) => (step.selected = step.fixedSelected ?? step.selected));
+    selectedSteps.value = steps.value.filter((step) => step.selected);
+
     return {
       confirm,
       toast,
@@ -126,7 +136,20 @@ export default defineComponent({
     // When selecting/unselecting a single item, this is invoked after onStepSelect/onStepUnselect,
     // after any dependencies have been selected/unselected
     selectedSteps(selected: Step[]) {
-      this.steps.forEach((step) => (step.selected = selected.some((v) => v.name === step.name)));
+      // To avoid endless recursive updates, determine if updating is needed
+      const forceUpdate = this.steps
+        .filter((step) => step.fixedSelected !== undefined)
+        .some((step) => !!selected.find((s) => s.id === step.id) !== step.fixedSelected);
+
+      if (forceUpdate) {
+        // Copy the new selection state into the steps, unless the value is fixed
+        this.steps.forEach(
+          (step: Step) =>
+            (step.selected = step.fixedSelected ?? selected.some((item) => item.id === step.id))
+        );
+        // Triggers this very watch again
+        this.selectedSteps = this.steps.filter((step) => step.selected);
+      }
     },
   },
   methods: {
@@ -144,8 +167,16 @@ export default defineComponent({
         (step) => !dependents.some((d) => d.id === step.id)
       );
     },
+    rowClass(data: Step) {
+      return data.fixedSelected !== undefined ? 'selection-disabled' : null;
+    },
   },
 });
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+::v-deep(.selection-disabled .p-selection-column) {
+  pointer-events: none;
+  opacity: 0.2;
+}
+</style>
