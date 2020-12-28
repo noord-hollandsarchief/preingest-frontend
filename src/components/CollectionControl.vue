@@ -15,9 +15,7 @@
       class="p-datatable-sm"
       :rowClass="rowClass"
     >
-      <!-- TODO hide expander if not applicable -->
-      <!-- TODO this increases the table height, despite class="p-datatable-sm" -->
-      <Column :expander="true" headerStyle="width: 3rem" />
+      <Column :expander="true" headerStyle="width: 1rem" bodyStyle="padding: 0" />
 
       <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
@@ -227,7 +225,10 @@ export default defineComponent({
       );
     },
     rowClass(data: Step) {
-      return data.fixedSelected !== undefined ? 'selection-disabled' : null;
+      return {
+        'selection-disabled': data.fixedSelected !== undefined,
+        'expander-disabled': !data.result,
+      };
     },
   },
 });
@@ -235,6 +236,10 @@ export default defineComponent({
 
 <style scoped lang="scss">
 ::v-deep(.selection-disabled .p-selection-column) {
+  pointer-events: none;
+  opacity: 0.2;
+}
+::v-deep(.expander-disabled .p-row-toggler) {
   pointer-events: none;
   opacity: 0.2;
 }
