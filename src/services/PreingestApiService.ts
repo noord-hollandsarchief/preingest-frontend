@@ -123,7 +123,12 @@ export class PreingestApiService {
     sessionId: string,
     action: string
   ): Promise<ActionResult | ActionResult[]> => {
-    return this.fetchWithDefaults(`output/json/${sessionId}/${action}.json`);
+    const file = action.endsWith('.json') ? action : `${action}.json`;
+    return this.fetchWithDefaults(`output/json/${sessionId}/${file}`);
+  };
+
+  getActionReportUrl = (sessionId: string, name: string) => {
+    return `${this.baseUrl}/output/report/${sessionId}/${name}`;
   };
 
   getSessions = async (): Promise<string[]> => {

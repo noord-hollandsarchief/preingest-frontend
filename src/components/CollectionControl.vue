@@ -32,6 +32,7 @@
 
       <template #expansion="slotProps">
         <div class="pre">{{ slotProps.data.result }}</div>
+        <a v-if="slotProps.data.downloadUrl" :href="slotProps.data.downloadUrl">Download</a>
       </template>
     </DataTable>
   </div>
@@ -56,6 +57,7 @@ interface Step extends DependentItem {
   reportFile?: string;
   state?: 'RUNNING' | 'SUCCESS' | 'ERROR';
   result?: ActionResult | ActionResult[];
+  downloadUrl?: string;
 }
 
 interface SelectionEvent {
@@ -85,6 +87,7 @@ export default defineComponent({
       { id: 'NamingValidation', dependsOn: ['UnpackTar'], name: 'Bestandsnamen controleren' },
       {
         id: 'SidecarValidation',
+        reportFile: 'SidecarValidationHandler_Samenvatting.json',
         dependsOn: ['UnpackTar'],
         name: 'Mappen en bestanden controleren op sidecarstructuur',
       },
@@ -158,7 +161,7 @@ export default defineComponent({
           if (step) {
             step.state = 'SUCCESS';
             if (name.endsWith('.json')) {
-              api.getActionResult(sessionId, `${step.id}Handler`).then((json) => {
+              api.getActionResult(sessionId, name).then((json) => {
                 step.result = json;
                 // TODO Get generic API results or move into definition of steps
                 switch (step.id) {
@@ -168,6 +171,8 @@ export default defineComponent({
                     break;
                 }
               });
+            } else {
+              step.downloadUrl = api.getActionReportUrl(sessionId, name);
             }
             step.reportFile = name;
           }
@@ -227,7 +232,7 @@ export default defineComponent({
     rowClass(data: Step) {
       return {
         'selection-disabled': data.fixedSelected !== undefined,
-        'expander-disabled': !data.result,
+        'expander-disabled': !data.result && !data.downloadUrl,
       };
     },
   },
