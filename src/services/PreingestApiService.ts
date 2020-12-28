@@ -18,6 +18,10 @@ export type JsonMap = { [key: string]: AnyJson };
 export type JsonArray = AnyJson[];
 
 export type Collection = {
+  name: string;
+  creationTime: string;
+  size: number;
+  unpackSessionId: string | null;
   tarResultData: JsonMap[];
   [index: string]: AnyJson;
 };
@@ -33,7 +37,8 @@ export type ActionResult = {
   SessionId: string;
   Code: string;
   ActionName: string;
-  CollectionName: string;
+  // The filename
+  CollectionItem: string;
   Message: string;
   CreationTimestamp: string;
 };
@@ -76,11 +81,48 @@ export class PreingestApiService {
     throw 'No result';
   }
 
+  /**
+   * TODO Replace with proper API call
+   *
+   * For the demo:
+   *
+   * - get all collections and filter on the one we want
+   * - get all guids
+   * - try to get the UnpackTarHandler that goes with one of those sessions, if any
+   */
+  getCollection = async (filename: string): Promise<Collection> => {
+    const [collections, sessions] = await Promise.all([this.getCollections(), this.getSessions()]);
+    const collection = collections.find((c) => c.name === filename);
+
+    if (!collection) {
+      this.toast.add({
+        severity: 'error',
+        summary: `Bestand bestaat niet`,
+        detail: `Het bestand ${filename} bestaat niet`,
+      });
+      throw new Error('No such file ' + filename);
+    }
+
+    // Some may fail with 500 Internal Server Error, so catch any error
+    const unpackResults = await Promise.all(
+      sessions.map((id) => this.getActionResult(id, 'UnpackTarHandler').catch((e) => e))
+    );
+
+    const unpackResult = unpackResults.find((r) => r.CollectionItem === filename);
+
+    collection.unpackSessionId = unpackResult?.SessionId;
+    return collection;
+  };
+
   getCollections = async (): Promise<Collection[]> => {
     return this.fetchWithDefaults('output/collections');
   };
 
-  getActionResult = async (sessionId: string, action: string): Promise<ActionResult> => {
+  // UnpackTarHandler.json, DroidValidationHandler.pdf and so on.
+  getActionResult = async (
+    sessionId: string,
+    action: string
+  ): Promise<ActionResult | ActionResult[]> => {
     return this.fetchWithDefaults(`output/json/${sessionId}/${action}.json`);
   };
 
@@ -141,7 +183,7 @@ export class PreingestApiService {
         try {
           const actionResult = await this.getActionResult(action.sessionId, actionName);
           // TODO how do we know if there's a failure?
-          if (actionResult?.Code === successCode) {
+          if (!Array.isArray(actionResult) && actionResult?.Code === successCode) {
             return action.sessionId;
           }
           // Repeat
@@ -192,7 +234,7 @@ export class PreingestApiService {
         summary: `Error ${res.status}`,
         detail: (await res.text()) || path,
         // Set some max lifetime, as very wide error messages may hide the toast's close button
-        life: 10000,
+        life: 3000,
       });
       console.error(res);
       throw new Error(res.statusText);
