@@ -10,12 +10,17 @@
       class="p-datatable-sm"
     >
       <!-- TODO hide expander if not applicable -->
+      <!-- TODO this increases the table height, despite class="p-datatable-sm" -->
       <Column :expander="true" headerStyle="width: 3rem" />
 
-      <Column selectionMode="multiple" headerStyle="width: 3rem" :exportable="false"></Column>
+      <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
       <Column field="name" header="Actie" />
-      <Column field="state" header="Status" />
+      <Column field="state" header="Status">
+        <template #body="slotProps">
+          <Tag v-if="slotProps.data.selected" severity="success">wachten</Tag>
+        </template>
+      </Column>
 
       <template #expansion="slotProps">
         <div class="collection-sessions">
@@ -117,10 +122,19 @@ export default defineComponent({
       selectedSteps,
     };
   },
+  watch: {
+    // When selecting/unselecting a single item, this is invoked after onStepSelect/onStepUnselect,
+    // after any dependencies have been selected/unselected
+    selectedSteps(selected: Step[]) {
+      this.steps.forEach((step) => (step.selected = selected.some((v) => v.name === step.name)));
+    },
+  },
   methods: {
+    // These events are not emitted when using the select all checkbox
     onStepSelect(event: SelectionEvent) {
       const step = event.data;
       const dependencies = getDependencies(step, this.steps);
+      // This does not cause the watcher for selectedSteps to be triggered twice
       this.selectedSteps = [...new Set([...this.selectedSteps, ...dependencies])];
     },
     onStepUnselect(event: SelectionEvent) {
