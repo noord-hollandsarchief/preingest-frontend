@@ -4,6 +4,7 @@
       <p>Aanmaakdatum: {{ collection.creationTime }}</p>
       <p>Bestandsgrootte: {{ collection.size }}</p>
       <p>Untar sessie: {{ collection.unpackSessionId ?? 'niet gevonden' }}</p>
+      <p>Checksum: {{ collection.calculatedChecksum ?? 'niet berekend' }}</p>
     </div>
     <DataTable
       :value="steps"
@@ -81,9 +82,9 @@ export default defineComponent({
     const selectedSteps = ref<Step[]>([]);
 
     const steps = ref<Step[]>([
-      { id: 'check', dependsOn: [], name: 'Checksum berekenen' },
+      { id: 'ContainerChecksum', dependsOn: [], name: 'Checksum berekenen' },
       { id: 'UnpackTar', dependsOn: [], name: 'Archief uitpakken' },
-      { id: 'ScanVirus', dependsOn: ['UnpackTar'], name: 'Viruscontrole' },
+      { id: 'ScanVirusValidation', dependsOn: ['UnpackTar'], name: 'Viruscontrole' },
       { id: 'NamingValidation', dependsOn: ['UnpackTar'], name: 'Bestandsnamen controleren' },
       {
         id: 'SidecarValidation',
@@ -153,6 +154,18 @@ export default defineComponent({
           unpackStep.selected = true;
           unpackStep.fixedSelected = false;
           selectedSteps.value = steps.value.filter((step) => step.selected);
+        }
+
+        const checksumStep = steps.value.find((s) => s.id === 'ContainerChecksum');
+        if (checksumStep) {
+          checksumStep.result = c.tarResultData.find(
+            (r) => r.actionName === 'ContainerChecksumHandler'
+          );
+          // TODO API Why do we get "message": "Geen resultaten."`?
+          checksumStep.state =
+            checksumStep.result?.message === 'Geen resultaten.' ? 'ERROR' : 'SUCCESS';
+          // E.g. `"message": "SHA1 : cc8d8a7d1de976bc94f7baba4c24409817f296c1"`
+          collection.value.calculatedChecksum = checksumStep.result?.message;
         }
 
         const resultFiles = await api.getSessionResults(sessionId);

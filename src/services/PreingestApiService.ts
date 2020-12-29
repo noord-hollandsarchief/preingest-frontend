@@ -22,8 +22,9 @@ export type Collection = {
   creationTime: string;
   size: number;
   unpackSessionId: string | null;
-  tarResultData: JsonMap[];
-  [index: string]: AnyJson;
+  tarResultData: ActionResult[];
+  // TODO Just for the demo here, as it needs to be fetched differently than the other results
+  calculatedChecksum?: string;
 };
 
 export type TriggerActionResult = {
@@ -33,13 +34,16 @@ export type TriggerActionResult = {
 };
 
 export type ActionResult = {
-  // TODO Change API to use consistent casing
+  // TODO Change API to use consistent casing (lower case in Collection#tarResultData)
   SessionId: string;
+  sessionId: string;
   Code: string;
   ActionName: string;
+  actionName: string;
   // The filename
   CollectionItem: string;
   Message: string;
+  message: string;
   CreationTimestamp: string;
   InGreenList?: boolean;
   // Too bad, TS2589: Type instantiation is excessively deep and possibly infinite.
