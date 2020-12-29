@@ -120,7 +120,7 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
-import { useToast } from 'primevue/usetoast';
+import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
 import { ActionResult, Collection, checksumTypes } from '@/services/PreingestApiService';
 import { DependentItem, getDependencies, getDependents } from '@/utils/dependentList';

@@ -64,7 +64,7 @@
 
 <script lang="ts">
 import { defineComponent, PropType, ref } from 'vue';
-import { useToast } from 'primevue/usetoast';
+import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
 import { checksumTypes } from '@/services/PreingestApiService';
 

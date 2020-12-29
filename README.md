@@ -36,7 +36,7 @@ rules, added `vue.config.js` to set the app's title, and added PrimeVue, PrimeIc
 
 ### Yarn
 
-- Project setup: `yarn install`
+- Download project dependencies: `yarn install`
 
 - Compile and hot-reload for development: `yarn serve`
 
@@ -47,6 +47,25 @@ rules, added `vue.config.js` to set the app's title, and added PrimeVue, PrimeIc
 - Lint, Prettify and fix files: `yarn lint`
 
   Unlike the pre-commit hook (see below), this is not limited to staged files.
+
+### Docker
+
+The [Dockerfile](./Dockerfile) creates a temporary (cached) build image, builds the project, and
+creates a final image that serves the static result using Nginx. To avoid CORS issues, this also
+[proxies API requests](./docker-nginx.conf) for <http://localhost:9000/api/> to
+<http://localhost:8000/api/>. 
+
+To build:
+
+```text
+docker build -t noordhollandsarchief/preingest-frontend:development .
+```
+
+To run on <http://localhost:9000>:
+
+```text
+docker run -it -p 9000:80 --rm --name my-name noordhollandsarchief/preingest-frontend:development
+```
 
 ### Linting and Prettier
 

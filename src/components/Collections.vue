@@ -128,7 +128,7 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
-import { useToast } from 'primevue/usetoast';
+import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
 import NewSessionDialog from '@/components/NewSessionDialog.vue';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
