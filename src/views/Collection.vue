@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <h1>Verwerking van {{ $route.params.filename }}</h1>
+    <h1>Verwerking</h1>
     <CollectionControl :filename="$route.params.filename" />
   </div>
 </template>

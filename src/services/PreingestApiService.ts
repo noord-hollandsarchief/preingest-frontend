@@ -17,6 +17,14 @@ export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
 export type JsonMap = { [key: string]: AnyJson };
 export type JsonArray = AnyJson[];
 
+export type ChecksumType = 'MD5' | 'SHA1' | 'SHA256' | 'SHA512';
+export const checksumTypes: { name: string; code: ChecksumType }[] = [
+  { name: 'MD-5', code: 'MD5' },
+  { name: 'SHA-1', code: 'SHA1' },
+  { name: 'SHA-256', code: 'SHA256' },
+  { name: 'SHA-512', code: 'SHA512' },
+];
+
 export type Collection = {
   name: string;
   creationTime: string;
@@ -25,6 +33,11 @@ export type Collection = {
   tarResultData: ActionResult[];
   // TODO Just for the demo here, as it needs to be fetched differently than the other results
   calculatedChecksum?: string;
+  // TODO Add to API
+  checksumType?: ChecksumType;
+  expectedChecksum?: string;
+  description?: string;
+  greenlist?: string;
 };
 
 export type TriggerActionResult = {

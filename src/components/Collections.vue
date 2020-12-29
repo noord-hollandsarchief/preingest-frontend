@@ -1,5 +1,5 @@
 <template>
-  <div class="collections">
+  <div class="card">
     <DataTable
       :value="collections"
       :autoLayout="true"
@@ -135,11 +135,9 @@
 import { defineComponent, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/usetoast';
-import dayjs from 'dayjs';
-import nl from 'dayjs/locale/nl';
-import fileSize from 'filesize';
 import { useApi } from '@/plugins/PreingestApi';
 import NewSessionDialog from '@/components/NewSessionDialog.vue';
+import { formatDateString, formatFileSize } from '@/utils/formatters';
 
 export default defineComponent({
   components: { NewSessionDialog },
@@ -155,6 +153,8 @@ export default defineComponent({
     const collections = await useApi().getCollections();
 
     return {
+      formatDateString,
+      formatFileSize,
       confirm,
       toast,
       createSessionActive,
@@ -167,12 +167,6 @@ export default defineComponent({
   },
   methods: {
     // TODO move into helper
-    formatFileSize(size: number) {
-      return fileSize(size, { separator: ',' });
-    },
-    formatDateString(date: string) {
-      return dayjs(date).locale(nl).format('D MMM YYYY HH:mm');
-    },
     createSession(name: string) {
       this.createSessionFilename = name;
       this.createSessionActive = true;

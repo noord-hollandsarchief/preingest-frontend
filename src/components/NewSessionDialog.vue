@@ -6,6 +6,7 @@
     :modal="true"
   >
     <div class="p-text-left">
+      <!-- TODO share with overview in CollectionControl, if we keep this dialog -->
       <h3>Start verwerking {{ filename }}</h3>
       <div class="p-fluid p-formgrid p-grid">
         <div class="p-field p-col-12 p-md-3">
@@ -65,6 +66,7 @@
 import { defineComponent, PropType, ref } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useApi } from '@/plugins/PreingestApi';
+import { checksumTypes } from '@/services/PreingestApiService';
 
 export default defineComponent({
   props: {
@@ -88,12 +90,6 @@ export default defineComponent({
     const api = useApi();
 
     const state = ref<'NEW' | 'RUNNING' | 'DONE'>('NEW');
-    const checksumTypes = [
-      { name: 'MD-5', code: 'MD5' },
-      { name: 'SHA-1', code: 'SHA1' },
-      { name: 'SHA-256', code: 'SHA256' },
-      { name: 'SHA-512', code: 'SHA512' },
-    ];
     // Just the code
     const checksumType = ref('');
     const expectedChecksum = ref('');

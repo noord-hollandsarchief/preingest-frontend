@@ -26,6 +26,10 @@ export default {
 </script>
 
 <style lang="scss">
+body {
+  background-color: #fafafa;
+}
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -55,5 +59,17 @@ export default {
   text-align: left;
   unicode-bidi: embed;
   white-space: pre;
+}
+
+.card {
+  background-color: #fff;
+  padding: 2rem;
+  -webkit-box-shadow: 0 2px 1px -1px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.14),
+    0 1px 3px 0 rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 1px -1px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.14),
+    0 1px 3px 0 rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  margin-bottom: 2rem;
+  text-align: left;
 }
 </style>

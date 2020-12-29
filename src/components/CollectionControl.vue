@@ -1,11 +1,83 @@
-<template>
-  <div class="collection">
-    <div v-if="collection">
-      <p>Aanmaakdatum: {{ collection.creationTime }}</p>
-      <p>Bestandsgrootte: {{ collection.size }}</p>
-      <p>Untar sessie: {{ collection.unpackSessionId ?? 'niet gevonden' }}</p>
+<template v-if="collection">
+  <div class="collection card">
+    <div>
+      <h3>Gegevens</h3>
+      <p>Bestandsnaam: {{ filename }}</p>
+      <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
+      <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
+      <!-- <p>Untar sessie: {{ collection.unpackSessionId ?? 'niet gevonden' }}</p> -->
       <p>Checksum: {{ collection.calculatedChecksum ?? 'niet berekend' }}</p>
+      <div class="p-fluid p-formgrid p-grid">
+        <div class="p-field p-col-12 p-md-3">
+          <label for="checksumType">Type checksum</label>
+          <Dropdown
+            id="checksumType"
+            v-model="collection.checksumType"
+            :options="checksumTypes"
+            optionLabel="name"
+            optionValue="code"
+            placeholder="Maak een keuze"
+          />
+        </div>
+        <div class="p-field p-col-12 p-md-9">
+          <label for="expectedChecksum">Opgegeven checksum</label>
+          <InputText
+            id="expectedChecksum"
+            v-model="collection.expectedChecksum"
+            type="text"
+            placeholder="De checksum van de zorgdrager"
+          />
+        </div>
+        <div class="p-field p-col-12">
+          <label for="greenlist">Greenlist</label>
+          <!-- TODO the actual types would need to be far more specific? -->
+          <Chips
+            v-model="collection.greenlist"
+            separator=","
+            id="greenlist"
+            placeholder="Toegestane documenttypes, kommagescheiden: doc,xls,pdf"
+          />
+        </div>
+        <div class="p-field p-col-12">
+          <label for="description">Omschrijving</label>
+          <Textarea id="description" rows="2" :autoResize="true" />
+        </div>
+      </div>
+      <Button label="Opslaan" icon="pi pi-save" class="p-button-success p-mr-2" @click="save" />
     </div>
+  </div>
+
+  <div class="card">
+    <h3>Verwerken</h3>
+
+    <Toolbar class="p-mb-4">
+      <template #left>
+        <Button
+          :disabled="!hasSelection"
+          label="Start"
+          icon="pi pi-play"
+          class="p-button-success p-mr-2"
+          @click="run"
+        />
+      </template>
+
+      <template #right>
+        <Button
+          :disabled="true"
+          label="Ingest"
+          icon="pi pi-upload"
+          class="p-button-help p-mx-2"
+          @click="runIngest"
+        />
+        <Button
+          label="Excel rapport"
+          icon="pi pi-download"
+          class="p-button-help"
+          @click="downloadExcel"
+        />
+      </template>
+    </Toolbar>
+
     <DataTable
       :value="steps"
       :autoLayout="true"
@@ -50,8 +122,9 @@ import { defineComponent, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/usetoast';
 import { useApi } from '@/plugins/PreingestApi';
-import { ActionResult, Collection } from '@/services/PreingestApiService';
+import { ActionResult, Collection, checksumTypes } from '@/services/PreingestApiService';
 import { DependentItem, getDependencies, getDependents } from '@/utils/dependentList';
+import { formatDateString, formatFileSize } from '@/utils/formatters';
 
 interface Step extends DependentItem {
   name: string;
@@ -103,7 +176,7 @@ export default defineComponent({
         id: 'DroidValidation',
         reportFile: 'DroidValidationHandler.droid',
         dependsOn: ['UnpackTar'],
-        name: 'DROID voorbereiden',
+        name: 'DROID bestandsclassificatie voorbereiden',
       },
       {
         id: 'droid-csv',
@@ -210,6 +283,9 @@ export default defineComponent({
     });
 
     return {
+      checksumTypes,
+      formatDateString,
+      formatFileSize,
       confirm,
       toast,
       expandedRows,
@@ -217,6 +293,11 @@ export default defineComponent({
       selectedSteps,
       collection,
     };
+  },
+  computed: {
+    hasSelection(): boolean {
+      return this.selectedSteps.length > 0;
+    },
   },
   watch: {
     // When selecting/unselecting a single item, this is invoked after onStepSelect/onStepUnselect,
@@ -263,6 +344,9 @@ export default defineComponent({
         'selection-disabled': data.fixedSelected !== undefined,
         'expander-disabled': !data.result && !data.downloadUrl,
       };
+    },
+    downloadExcel() {
+      // TODO Download Excel report
     },
   },
 });
