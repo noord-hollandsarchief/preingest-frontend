@@ -11,6 +11,7 @@
 
 // TODO Module not found: Error: [CaseSensitivePathsPlugin] `[..]/node_modules/primevue/useToast.js`
 // does not match the corresponding path on disk `usetoast.js`.
+// See https://github.com/primefaces/primevue/issues/813
 import { useToast } from 'primevue/components/toast/useToast';
 
 export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
