@@ -20,11 +20,17 @@
 
       <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
-      <Column field="name" header="Actie" />
+      <Column field="name" header="Actie">
+        <template #body="slotProps">
+          <span v-tooltip="slotProps.data.info">
+            {{ slotProps.data.name }} <i v-if="slotProps.data.info" class="pi pi-info-circle"></i>
+          </span>
+        </template>
+      </Column>
 
       <Column field="state" header="Status" headerClass="p-text-center" bodyClass="p-text-center">
         <template #body="slotProps">
-          <Tag v-if="slotProps.data.selected" severity="info">wachten</Tag>
+          <Tag v-if="slotProps.data.selected" severity="info">wachtrij</Tag>
           <Tag v-else-if="slotProps.data.state === 'RUNNING'" severity="info">bezig</Tag>
           <Tag v-else-if="slotProps.data.state === 'SUCCESS'" severity="success">gereed</Tag>
           <Tag v-else-if="slotProps.data.state === 'ERROR'" severity="danger">fout</Tag>
@@ -49,6 +55,7 @@ import { DependentItem, getDependencies, getDependents } from '@/utils/dependent
 
 interface Step extends DependentItem {
   name: string;
+  info?: string;
   // The initial or current selection state
   selected?: boolean;
   // A fixed value for selected (false forces the step to always be non-selected)
@@ -129,8 +136,11 @@ export default defineComponent({
       },
       {
         id: 'Transformation',
+        // If ever running tasks in parallel, then GreenList needs to be run first, if selected
         dependsOn: ['UnpackTar'],
         name: 'Metadatabestanden omzetten naar XIP bestandsformaat',
+        info:
+          'Dit verandert de mapinhoud, dus heeft effect op de controle van de greenlist als die pas later wordt uitgevoerd',
       },
       {
         id: 'sip',
