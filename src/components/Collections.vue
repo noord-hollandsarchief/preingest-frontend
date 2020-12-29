@@ -17,7 +17,7 @@
       </template>
 
       <!-- TODO hide expander if not applicable -->
-      <Column :expander="true" headerStyle="width: 3rem" />
+      <!--      <Column :expander="true" headerStyle="width: 3rem" />-->
 
       <Column field="name" header="Naam" :sortable="true" filterMatchMode="contains" />
 
@@ -57,43 +57,38 @@
         bodyClass="p-text-center"
       >
         <template #body="slotProps">
-          <Tag
-            v-if="slotProps.data.tarResultData && slotProps.data.size > 178614784"
-            severity="danger"
-            >fout
-          </Tag>
-          <Tag
-            v-if="slotProps.data.tarResultData && slotProps.data.size <= 178614784"
-            severity="success"
-            >bezig
-          </Tag>
           <Tag v-if="!slotProps.data.tarResultData" severity="info">nieuw</Tag>
+          <Tag v-else severity="warning">onbekend </Tag>
         </template>
       </Column>
 
-      <Column headerStyle="width:1rem">
+      <Column headerStyle="width:8rem">
         <template #body="slotProps">
-          <!--            v-if="!slotProps.data.tarResultData"-->
-          <Button
-            icon="pi pi-plus"
-            class="p-button-sm p-button-rounded"
-            @click="createSession(slotProps.data.name)"
-            v-tooltip="'Start een nieuwe sessie om dit bestand te verwerken'"
-          />
-        </template>
-      </Column>
+          <router-link :to="`/file/${slotProps.data.name}`">
+            <Button
+              v-if="slotProps.data.tarResultData"
+              icon="pi pi-search"
+              class="p-button-sm p-button-rounded"
+              v-tooltip="'Bekijk de resultaten'"
+            />
+            <Button
+              v-else
+              icon="pi pi-play"
+              class="p-button-sm p-button-rounded p-button-success"
+              v-tooltip="'Start verwerking van dit bestand'"
+            />
+          </router-link>
 
-      <Column headerStyle="width:1rem">
-        <template #body="slotProps">
           <Button
             icon="pi pi-trash"
-            class="p-button-sm p-button-rounded p-button-danger"
+            class="p-button-sm p-button-rounded p-button-danger p-ml-2"
             @click="deleteFile($event, slotProps.data.name)"
             v-tooltip="'Verwijder het bestand en de resultaten'"
           />
         </template>
       </Column>
 
+      <!-- TODO remove when indeed no longer using. -->
       <template #expansion="slotProps">
         <div class="collection-sessions">
           <DataTable :value="slotProps.data.tarResultData">
@@ -121,9 +116,8 @@
         </div>
       </template>
     </DataTable>
-
-    <!--    <div class="pre">{{ collections }}</div>-->
   </div>
+  <!-- TODO remove when indeed no longer using. -->
   <NewSessionDialog
     v-model:visible="createSessionActive"
     :filename="createSessionFilename"
