@@ -64,7 +64,7 @@
 
       <Column headerStyle="width:8rem">
         <template #body="slotProps">
-          <router-link :to="`/file/${slotProps.data.name}`">
+          <router-link :to="`/file/${slotProps.data.name}`" style="text-decoration: none">
             <Button
               v-if="slotProps.data.tarResultData"
               icon="pi pi-search"
