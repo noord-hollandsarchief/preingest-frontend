@@ -26,6 +26,13 @@ module.exports = {
         location: 'anywhere',
       },
     ],
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: 'TSEnumDeclaration',
+        message: "Don't declare enums; see https://stackoverflow.com/a/60041791",
+      },
+    ],
   },
   overrides: [
     {
