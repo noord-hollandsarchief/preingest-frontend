@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import Home from '@/views/Home.vue';
 import Collection from '@/views/Collection.vue';
-import Session from '@/views/Session.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -13,11 +12,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/file/:filename',
     name: 'Collection',
     component: Collection,
-  },
-  {
-    path: '/session/:guid',
-    name: 'Session',
-    component: Session,
   },
   {
     path: '/help',
