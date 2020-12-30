@@ -34,6 +34,10 @@ Next, upgraded Prettier to fix errors in the generated code, configured `.editor
 rules, added `vue.config.js` to set the app's title, and added PrimeVue, PrimeIcons and PrimeFlex.
 </details>
 
+### Configuration
+
+The configuration is kept in [.env](./.env) files.
+
 ### Yarn
 
 - Download project dependencies: `yarn install`

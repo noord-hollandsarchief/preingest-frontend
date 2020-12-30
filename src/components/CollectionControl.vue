@@ -3,47 +3,49 @@
     <div>
       <h3>Gegevens</h3>
       <p>Bestandsnaam: {{ filename }}</p>
-      <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
-      <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
-      <!-- <p>Untar sessie: {{ collection.unpackSessionId ?? 'niet gevonden' }}</p> -->
-      <p>Checksum: {{ collection.calculatedChecksum ?? 'niet berekend' }}</p>
-      <div class="p-fluid p-formgrid p-grid">
-        <div class="p-field p-col-12 p-md-3">
-          <label for="checksumType">Type checksum</label>
-          <Dropdown
-            id="checksumType"
-            v-model="collection.checksumType"
-            :options="checksumTypes"
-            optionLabel="name"
-            optionValue="code"
-            placeholder="Maak een keuze"
-          />
+      <div v-if="collection">
+        <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
+        <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
+        <p>Untar sessie: {{ collection.unpackSessionId ?? 'niet gevonden' }}</p>
+        <p>Checksum: {{ collection.calculatedChecksum ?? 'niet berekend' }}</p>
+        <div class="p-fluid p-formgrid p-grid">
+          <div class="p-field p-col-12 p-md-3">
+            <label for="checksumType">Type checksum</label>
+            <Dropdown
+              id="checksumType"
+              v-model="collection.checksumType"
+              :options="checksumTypes"
+              optionLabel="name"
+              optionValue="code"
+              placeholder="Maak een keuze"
+            />
+          </div>
+          <div class="p-field p-col-12 p-md-9">
+            <label for="expectedChecksum">Opgegeven checksum</label>
+            <InputText
+              id="expectedChecksum"
+              v-model="collection.expectedChecksum"
+              type="text"
+              placeholder="De checksum van de zorgdrager"
+            />
+          </div>
+          <div class="p-field p-col-12">
+            <label for="greenlist">Greenlist</label>
+            <!-- TODO the actual types would need to be far more specific? -->
+            <Chips
+              v-model="collection.greenlist"
+              separator=","
+              id="greenlist"
+              placeholder="Toegestane documenttypes, kommagescheiden: doc,xls,pdf"
+            />
+          </div>
+          <div class="p-field p-col-12">
+            <label for="description">Omschrijving</label>
+            <Textarea id="description" rows="2" :autoResize="true" />
+          </div>
         </div>
-        <div class="p-field p-col-12 p-md-9">
-          <label for="expectedChecksum">Opgegeven checksum</label>
-          <InputText
-            id="expectedChecksum"
-            v-model="collection.expectedChecksum"
-            type="text"
-            placeholder="De checksum van de zorgdrager"
-          />
-        </div>
-        <div class="p-field p-col-12">
-          <label for="greenlist">Greenlist</label>
-          <!-- TODO the actual types would need to be far more specific? -->
-          <Chips
-            v-model="collection.greenlist"
-            separator=","
-            id="greenlist"
-            placeholder="Toegestane documenttypes, kommagescheiden: doc,xls,pdf"
-          />
-        </div>
-        <div class="p-field p-col-12">
-          <label for="description">Omschrijving</label>
-          <Textarea id="description" rows="2" :autoResize="true" />
-        </div>
+        <Button label="Opslaan" icon="pi pi-save" class="p-button-success p-mr-2" @click="save" />
       </div>
-      <Button label="Opslaan" icon="pi pi-save" class="p-button-success p-mr-2" @click="save" />
     </div>
   </div>
 
@@ -57,7 +59,7 @@
           label="Start"
           icon="pi pi-play"
           class="p-button-success p-mr-2"
-          @click="run"
+          @click="runSelected"
         />
       </template>
 
@@ -102,10 +104,21 @@
 
       <Column field="state" header="Status" headerClass="p-text-center" bodyClass="p-text-center">
         <template #body="slotProps">
-          <Tag v-if="slotProps.data.selected" severity="info">wachtrij</Tag>
-          <Tag v-else-if="slotProps.data.state === 'RUNNING'" severity="info">bezig</Tag>
-          <Tag v-else-if="slotProps.data.state === 'SUCCESS'" severity="success">gereed</Tag>
-          <Tag v-else-if="slotProps.data.state === 'ERROR'" severity="danger">fout</Tag>
+          <Tag v-if="slotProps.data.state === 'wait'" severity="info">wachtrij</Tag>
+          <Tag v-else-if="slotProps.data.state === 'running'" severity="warning">bezig</Tag>
+          <Tag v-else-if="slotProps.data.state === 'success'" severity="success">gereed</Tag>
+          <Tag
+            v-else-if="slotProps.data.state === 'error'"
+            severity="danger"
+            v-tooltip="'De actie is uitgevoerd, maar er zijn fouten gevonden'"
+            >fout</Tag
+          >
+          <Tag
+            v-else-if="slotProps.data.state === 'failed'"
+            severity="danger"
+            v-tooltip="'De actie kon niet worden uitgevoerd'"
+            >onbekend</Tag
+          >
         </template>
       </Column>
 
@@ -122,24 +135,33 @@ import { defineComponent, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
-import { ActionResult, Collection, checksumTypes } from '@/services/PreingestApiService';
-import { DependentItem, getDependencies, getDependents } from '@/utils/dependentList';
+import {
+  ActionResult,
+  GreenListActionResult,
+  Collection,
+  checksumTypes,
+  Action,
+  actions,
+} from '@/services/PreingestApiService';
+import { getDependencies, getDependents } from '@/utils/dependentList';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
+import dayjs from 'dayjs';
 
-interface Step extends DependentItem {
-  name: string;
-  info?: string;
+type StepState = 'wait' | 'running' | 'success' | 'error' | 'failed';
+
+type Step = Action & {
   // The initial or current selection state
   selected?: boolean;
   // A fixed value for selected (false forces the step to always be non-selected)
   fixedSelected?: boolean;
-  // Result files default to `<id>Handler.json`, but may need to be more specific for, e.g.,
-  // `DroidValidationHandler.csv` and `DroidValidationHandler.planets.xml`
-  reportFile?: string;
-  state?: 'RUNNING' | 'SUCCESS' | 'ERROR';
-  result?: ActionResult | ActionResult[];
+  state?: StepState;
+  lastFetchedState?: StepState;
   downloadUrl?: string;
-}
+  /**
+   * A custom function to trigger an action; if not set then {@link triggerActionAndGetNewResults} is used
+   */
+  triggerFn?: (step: Step) => Promise<ActionResult | ActionResult[]>;
+};
 
 interface SelectionEvent {
   originalEvent: Event;
@@ -161,66 +183,42 @@ export default defineComponent({
     const collection = ref<Collection | undefined>();
     const selectedSteps = ref<Step[]>([]);
 
-    const steps = ref<Step[]>([
-      { id: 'ContainerChecksum', dependsOn: [], name: 'Checksum berekenen' },
-      { id: 'UnpackTar', dependsOn: [], name: 'Archief uitpakken' },
-      { id: 'ScanVirusValidation', dependsOn: ['UnpackTar'], name: 'Viruscontrole' },
-      { id: 'NamingValidation', dependsOn: ['UnpackTar'], name: 'Bestandsnamen controleren' },
-      {
-        id: 'SidecarValidation',
-        reportFile: 'SidecarValidationHandler_Samenvatting.json',
-        dependsOn: ['UnpackTar'],
-        name: 'Mappen en bestanden controleren op sidecarstructuur',
-      },
-      {
-        id: 'DroidValidation',
-        reportFile: 'DroidValidationHandler.droid',
-        dependsOn: ['UnpackTar'],
-        name: 'DROID bestandsclassificatie voorbereiden',
-      },
-      {
-        id: 'droid-csv',
-        reportFile: 'DroidValidationHandler.csv',
-        dependsOn: ['DroidValidation'],
-        name: 'DROID metagegevens exporteren naar CSV',
-      },
-      {
-        id: 'droid-pdf',
-        reportFile: 'DroidValidationHandler.pdf',
-        dependsOn: ['DroidValidation'],
-        name: 'DROID metagegevens exporteren naar PDF/A',
-      },
-      {
-        id: 'droid-xml',
-        reportFile: 'DroidValidationHandler.planets.xml',
-        dependsOn: ['DroidValidation'],
-        name: 'DROID metagegevens exporteren naar XML',
-      },
-      {
-        id: 'GreenList',
-        dependsOn: ['droid-csv'],
-        name: 'Controleren of alle bestandstypen aan greenlist voldoen',
-      },
-      { id: 'Encoding', dependsOn: ['UnpackTar'], name: 'Encoding metadatabestanden controleren' },
-      {
-        id: 'MetadataValidation',
-        dependsOn: ['UnpackTar'],
-        name: 'Metadata valideren met XML-schema (XSD) en Schematron',
-      },
-      {
-        id: 'Transformation',
-        // If ever running tasks in parallel, then GreenList needs to be run first, if selected
-        dependsOn: ['UnpackTar'],
-        name: 'Metadatabestanden omzetten naar XIP bestandsformaat',
-        info:
-          'Dit verandert de mapinhoud, dus heeft effect op de controle van de greenlist als die pas later wordt uitgevoerd',
-      },
-      {
-        id: 'sip',
-        dependsOn: ['UnpackTar', 'Transformation'],
-        name: 'Bestanden omzetten naar SIP bestandsformaat',
-      },
-    ]);
+    const notImplemented = () => {
+      toast.add({
+        severity: 'error',
+        summary: 'Not implemented',
+        life: 1000,
+      });
+    };
+
+    const calculateChecksum = async (step: Step): Promise<ActionResult> => {
+      // TODO enforce
+      if (!collection.value || !collection.value.checksumType) {
+        throw Error('TODO: enforce checksum type selection');
+      }
+      const result = await api.getChecksum(collection.value.name, collection.value.checksumType);
+      collection.value.calculatedChecksum = result.message;
+      return result;
+    };
+
+    const unpack = async (step: Step): Promise<ActionResult | ActionResult[]> => {
+      if (!collection.value) {
+        throw Error('Programming error: unpacking needds a file name');
+      }
+      // The sessionId is the filename here
+      return api.triggerActionAndGetNewResults(encodeURIComponent(collection.value.name), step);
+    };
+
+    const hiddenActions = ['reporting/droid'];
+    const extendedSteps: Partial<Step>[] = [
+      { id: 'calculate', triggerFn: calculateChecksum },
+      { id: 'unpack', triggerFn: unpack },
+    ];
+    const steps = ref<Step[]>(
+      actions
+        .filter((a) => !hiddenActions.some((ignored) => ignored === a.id))
+        .map((a) => ({ ...a, ...extendedSteps.find((e) => e.id === a.id) }))
+    );
 
     // Force `selected` to match `fixSelected`, in case the definition above is not consistent; this
     // does not also force-select/unselect any dependencies or dependents
@@ -230,32 +228,35 @@ export default defineComponent({
     // For the demo: try to load the archive's state, to see if it's already unpacked
     api.getCollection(props.filename).then(async (c) => {
       collection.value = c;
+
+      // This may also exist when the checksum was calculated but the archive was not unpacked
+      const checksumStep = steps.value.find((s) => s.id === 'calculate');
+      if (checksumStep) {
+        checksumStep.result = c.tarResultData.find(
+          (r) => r.actionName === 'ContainerChecksumHandler'
+        );
+        // TODO API Why do we get "message": "Geen resultaten."`?
+        checksumStep.lastFetchedState =
+          checksumStep.result?.message === 'Geen resultaten.' ? 'error' : 'success';
+        checksumStep.state = checksumStep.lastFetchedState;
+        // E.g. `"message": "SHA1 : cc8d8a7d1de976bc94f7baba4c24409817f296c1"`
+        collection.value.calculatedChecksum = checksumStep.result?.message;
+      }
+
       const sessionId = c.unpackSessionId;
       if (sessionId) {
-        const unpackStep = steps.value.find((s) => s.id === 'UnpackTar');
+        const unpackStep = steps.value.find((s) => s.id === 'unpack');
         if (unpackStep) {
           unpackStep.selected = true;
           unpackStep.fixedSelected = false;
           selectedSteps.value = steps.value.filter((step) => step.selected);
         }
 
-        const checksumStep = steps.value.find((s) => s.id === 'ContainerChecksum');
-        if (checksumStep) {
-          checksumStep.result = c.tarResultData.find(
-            (r) => r.actionName === 'ContainerChecksumHandler'
-          );
-          // TODO API Why do we get "message": "Geen resultaten."`?
-          checksumStep.state =
-            checksumStep.result?.message === 'Geen resultaten.' ? 'ERROR' : 'SUCCESS';
-          // E.g. `"message": "SHA1 : cc8d8a7d1de976bc94f7baba4c24409817f296c1"`
-          collection.value.calculatedChecksum = checksumStep.result?.message;
-        }
-
-        const resultFiles = await api.getSessionResults(sessionId);
+        const resultFiles = await api.getResultFilenames(sessionId);
         resultFiles.forEach((name) => {
-          const step = steps.value.find((s) => (s.reportFile ?? s.id + 'Handler.json') === name);
+          const step = steps.value.find((s) => s.resultFilename === name);
           if (step) {
-            step.state = 'SUCCESS';
+            step.state = 'success';
             if (name.endsWith('.json')) {
               api.getActionResult(sessionId, name).then((json) => {
                 step.result = json;
@@ -263,31 +264,35 @@ export default defineComponent({
                 switch (step.id) {
                   case 'MetadataValidation':
                     step.state =
-                      Array.isArray(step.result) && step.result.length > 0 ? 'ERROR' : 'SUCCESS';
+                      Array.isArray(step.result) && step.result.length > 0 ? 'error' : 'success';
                     break;
                   case 'GreenList':
                     step.state =
-                      Array.isArray(step.result) && step.result.some((r) => r.InGreenList === false)
-                        ? 'ERROR'
-                        : 'SUCCESS';
+                      Array.isArray(step.result) &&
+                      step.result.some((r) => (r as GreenListActionResult).InGreenList === false)
+                        ? 'error'
+                        : 'success';
                     break;
                 }
               });
             } else {
               step.downloadUrl = api.getActionReportUrl(sessionId, name);
             }
-            step.reportFile = name;
+            step.resultFilename = name;
+            step.lastFetchedState = step.state;
           }
         });
       }
     });
 
     return {
+      api,
       checksumTypes,
       formatDateString,
       formatFileSize,
       confirm,
       toast,
+      notImplemented,
       expandedRows,
       steps,
       selectedSteps,
@@ -300,6 +305,7 @@ export default defineComponent({
     },
   },
   watch: {
+    // TODO fix updating state tags
     // When selecting/unselecting a single item, this is invoked after onStepSelect/onStepUnselect,
     // after any dependencies have been selected/unselected
     selectedSteps(selected: Step[]) {
@@ -325,14 +331,17 @@ export default defineComponent({
     onStepSelect(event: SelectionEvent) {
       const step = event.data;
       step.selected = true;
+      step.state = 'wait';
       const dependencies = getDependencies(step, this.steps);
       dependencies.forEach((dependency) => (dependency.selected = true));
       // This does not cause the watcher for selectedSteps to be triggered twice
+      // TODO set state for those too?
       this.selectedSteps = [...new Set([...this.selectedSteps, ...dependencies])];
     },
     onStepUnselect(event: SelectionEvent) {
       const step = event.data;
       step.selected = false;
+      step.state = step.lastFetchedState;
       const dependents = getDependents(step, this.steps);
       dependents.forEach((dependent) => (dependent.selected = false));
       this.selectedSteps = this.selectedSteps.filter(
@@ -345,8 +354,47 @@ export default defineComponent({
         'expander-disabled': !data.result && !data.downloadUrl,
       };
     },
+    async runSelected() {
+      if (!this.collection) {
+        return;
+      }
+      // TODO freeze GUI
+      // Simply run in the given order, one by one
+      for (const step of this.steps) {
+        // this.selectedSteps does not use the same order as defined in this.steps
+        if (this.selectedSteps.find((s) => s.id === step.id)) {
+          step.state = 'running';
+          try {
+            step.result = await (step.triggerFn
+              ? step.triggerFn(step)
+              : this.api.triggerActionAndGetNewResults(this.collection.unpackSessionId, step));
+            // TODO API make fn return the state
+            step.state = 'success';
+            step.lastFetchedState = step.state;
+          } catch (e) {
+            this.toast.add({
+              severity: 'error',
+              summary: 'Mislukt',
+              detail: e,
+            });
+            step.state = 'failed';
+            // TODO Stop processing further results?
+          }
+          // TODO unselect? If we do, we can no longer tell what we did?
+        }
+      }
+    },
+    save() {
+      // TODO Save file properties
+      this.notImplemented();
+    },
+    runIngest() {
+      // TODO Trigger ingest
+      this.notImplemented();
+    },
     downloadExcel() {
       // TODO Download Excel report
+      this.notImplemented();
     },
   },
 });

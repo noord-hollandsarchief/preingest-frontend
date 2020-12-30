@@ -13,12 +13,17 @@
 // does not match the corresponding path on disk `usetoast.js`.
 // See https://github.com/primefaces/primevue/issues/813
 import { useToast } from 'primevue/components/toast/useToast';
+import { DependentItem } from '@/utils/dependentList';
+import dayjs from 'dayjs';
 
 export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
 export type JsonMap = { [key: string]: AnyJson };
 export type JsonArray = AnyJson[];
 
+// export type ActionState = 'none' | 'running' | 'success' | 'error';
 export type ChecksumType = 'MD5' | 'SHA1' | 'SHA256' | 'SHA512';
+
+// TODO move elsewhere when trashing NewSessionDialog
 export const checksumTypes: { name: string; code: ChecksumType }[] = [
   { name: 'MD-5', code: 'MD5' },
   { name: 'SHA-1', code: 'SHA1' },
@@ -26,11 +31,125 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
   { name: 'SHA-512', code: 'SHA512' },
 ];
 
+export type Action = DependentItem & {
+  name: string;
+  info?: string;
+  resultFilename: string;
+  // The HTTP method, default POST
+  method?: string;
+  result?: ActionResult | ActionResult[];
+};
+
+/**
+ * The actions supported by this API. The `id` must match the URL path, like `virusscan` in
+ * `/preingest/virusscan/:guid` and like `reporting/pdf` for `/preingest/reporting/:type/:guid`
+ */
+export const actions: Action[] = [
+  {
+    id: 'calculate',
+    dependsOn: [],
+    resultFilename: 'ContainerChecksumHandler.json',
+    method: 'GET',
+    name: 'Checksum berekenen',
+  },
+  {
+    id: 'unpack',
+    dependsOn: [],
+    resultFilename: 'UnpackTarHandler.json',
+    name: 'Archief uitpakken',
+    info:
+      'Omdat de resultaten worden opgeslagen in het uitgepakte archief, kan een archiefbestand na uitpakken niet opnieuw worden uitgepakt',
+  },
+  {
+    id: 'virusscan',
+    dependsOn: ['unpack'],
+    resultFilename: 'ScanVirusValidationHandler.json',
+    name: 'Viruscontrole',
+  },
+  {
+    id: 'naming',
+    dependsOn: ['unpack'],
+    resultFilename: 'NamingValidationHandler.json',
+    name: 'Bestandsnamen controleren',
+  },
+  {
+    id: 'sidecar',
+    dependsOn: ['unpack'],
+    // TODO API multiple files? We (also) need single file for result
+    resultFilename: 'SidecarValidationHandler_Samenvatting.json',
+    name: 'Mappen en bestanden controleren op sidecarstructuur',
+  },
+  {
+    id: 'profiling',
+    dependsOn: ['unpack'],
+    resultFilename: 'DroidValidationHandler.droid',
+    name: 'DROID bestandsclassificatie voorbereiden',
+  },
+  {
+    id: 'exporting',
+    dependsOn: ['profiling'],
+    resultFilename: 'DroidValidationHandler.csv',
+    name: 'DROID metagegevens exporteren naar CSV',
+  },
+  {
+    id: 'reporting/droid',
+    dependsOn: ['profiling'],
+    resultFilename: 'DroidValidationHandler.droid',
+    name: 'DROID metagegevens exporteren',
+  },
+  {
+    id: 'reporting/pdf',
+    dependsOn: ['profiling'],
+    resultFilename: 'DroidValidationHandler.pdf',
+    name: 'DROID metagegevens exporteren naar PDF',
+  },
+  {
+    id: 'reporting/planets',
+    dependsOn: ['profiling'],
+    resultFilename: 'DroidValidationHandler.planets.xml',
+    name: 'DROID metagegevens exporteren naar XML',
+  },
+  {
+    id: 'greenlist',
+    dependsOn: ['exporting'],
+    resultFilename: 'GreenListHandler.json',
+    name: 'Controleren of alle bestandstypen aan greenlist voldoen',
+  },
+  {
+    id: 'encoding',
+    dependsOn: ['unpack'],
+    resultFilename: 'EncodingHandler.json',
+    name: 'Encoding metadatabestanden controleren',
+  },
+  {
+    id: 'validate',
+    dependsOn: ['unpack'],
+    resultFilename: 'MetadataValidationHandler.json',
+    name: 'Metadata valideren met XML-schema (XSD) en Schematron',
+  },
+  {
+    id: 'transform',
+    // If ever running tasks in parallel, then greenlist needs to be run first, if selected
+    dependsOn: ['unpack'],
+    resultFilename: 'TransformationHandler.json',
+    name: 'Metadatabestanden omzetten naar XIP bestandsformaat',
+    info:
+      'Dit verandert de mapinhoud, dus heeft effect op de controle van de greenlist als die pas later wordt uitgevoerd',
+  },
+  {
+    id: 'sip',
+    dependsOn: ['transform'],
+    resultFilename: 'TODO',
+    name: 'Bestanden omzetten naar SIP bestandsformaat',
+  },
+];
+
 export type Collection = {
   name: string;
   creationTime: string;
   size: number;
-  unpackSessionId: string | null;
+  // TODO API Implicit session, or create session when requesting the list of collections
+  unpackSessionId: string;
   tarResultData: ActionResult[];
   // TODO Just for the demo here, as it needs to be fetched differently than the other results
   calculatedChecksum?: string;
@@ -59,48 +178,43 @@ export type ActionResult = {
   Message: string;
   message: string;
   CreationTimestamp: string;
-  InGreenList?: boolean;
   // Too bad, TS2589: Type instantiation is excessively deep and possibly infinite.
   // [index: string]: AnyJson;
   // item?: JsonMap;
 };
+
+export type GreenListActionResult = ActionResult & { InGreenList?: boolean };
 
 export class PreingestApiService {
   private toast = useToast();
   private baseUrl = process.env.VUE_APP_PREINGEST_API;
   private delay = (timeout: number) => new Promise((res) => setTimeout(res, timeout));
 
+  // TODO Increase default timeout in .env?
   private async repeatUntilResult<T>(
     fn: () => Promise<T | undefined>,
-    delay = 1000,
-    maxTries = 10
+    maxSeconds = process.env.VUE_APP_POLL_MAX_SECONDS
   ): Promise<T> {
-    // TODO improve max tries, exponential backoff and all
-    while (maxTries > 0) {
-      maxTries--;
-      await this.delay(delay);
+    const startTime = dayjs();
+    const endTime = startTime.add(maxSeconds, 's');
+    let tries = 0;
+    while (dayjs().isBefore(endTime)) {
+      if (tries > 0) {
+        // TODO maybe a (small) initial delay is useful too, when an action has just been fired?
+        // Simple exponential backoff, with a maximum of 5 seconds between retries
+        await this.delay(Math.min(10 ** tries, 5000));
+      }
+      tries++;
       try {
         const result = await fn();
         if (result) {
           return result;
         }
       } catch (e) {
-        this.toast.add({
-          severity: 'error',
-          summary: 'Programming error',
-          detail: e,
-          life: delay,
-        });
-        throw e;
+        // If important, then this should already have been reported by whatever function we invoked
       }
     }
-    this.toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'No result',
-      life: 30000,
-    });
-    throw 'No result';
+    throw `Geen resultaat na ${tries} pogingen in ${dayjs().diff(startTime, 'm')} minuten.`;
   }
 
   /**
@@ -110,7 +224,8 @@ export class PreingestApiService {
    *
    * - get all collections and filter on the one we want
    * - get all guids
-   * - try to get the UnpackTarHandler that goes with one of those sessions, if any
+   * - try to get the UnpackTarHandler that goes with one of those sessions, if any; this may also
+   *   exist when the checksum was calculated but the archive was not unpacked
    */
   getCollection = async (filename: string): Promise<Collection> => {
     const [collections, sessions] = await Promise.all([this.getCollections(), this.getSessions()]);
@@ -127,7 +242,7 @@ export class PreingestApiService {
 
     // Some may fail with 500 Internal Server Error, so catch any error
     const unpackResults = await Promise.all(
-      sessions.map((id) => this.getActionResult(id, 'UnpackTarHandler').catch((e) => e))
+      sessions.map((id) => this.getActionResult(id, 'UnpackTarHandler.json').catch((e) => e))
     );
 
     const unpackResult = unpackResults.find((r) => r.CollectionItem === filename);
@@ -143,10 +258,9 @@ export class PreingestApiService {
   // UnpackTarHandler.json, DroidValidationHandler.pdf and so on.
   getActionResult = async (
     sessionId: string,
-    action: string
+    resultFileName: string
   ): Promise<ActionResult | ActionResult[]> => {
-    const file = action.endsWith('.json') ? action : `${action}.json`;
-    return this.fetchWithDefaults(`output/json/${sessionId}/${file}`);
+    return this.fetchWithDefaults(`output/json/${sessionId}/${resultFileName}`);
   };
 
   getActionReportUrl = (sessionId: string, name: string) => {
@@ -157,7 +271,7 @@ export class PreingestApiService {
     return this.fetchWithDefaults('output/sessions');
   };
 
-  getSessionResults = async (guid: string): Promise<string[]> => {
+  getResultFilenames = async (guid: string): Promise<string[]> => {
     return this.fetchWithDefaults(`output/results/${guid}`);
   };
 
@@ -165,7 +279,7 @@ export class PreingestApiService {
    * Send an API command to trigger calculating the checksum, and poll for its results.
    */
   // TODO typing 'MD5' | 'SHA1' | 'SHA256' | 'SHA512'
-  getChecksum = async (filename: string, checksumType: string): Promise<string> => {
+  getChecksum = async (filename: string, checksumType: string): Promise<ActionResult> => {
     // TODO Change API to validate parameters
     // TODO Change API to rephrase "Geen resultaat." to some generic code
     // TODO Change API to get results for single file
@@ -182,11 +296,7 @@ export class PreingestApiService {
           c?.name === filename && c.tarResultData?.filter((r) => r.sessionId === action.sessionId)
       )[0];
       if (checksumSession) {
-        const message = checksumSession.tarResultData[0].message as string;
-        // E.g. `"message": "SHA1 : cc8d8a7d1de976bc94f7baba4c24409817f296c1"`
-        if (message && message.startsWith(checksumType)) {
-          return message.split(':')[1].trim();
-        }
+        return checksumSession.tarResultData[0];
       }
       // Repeat
       return undefined;
@@ -194,37 +304,62 @@ export class PreingestApiService {
   };
 
   /**
-   * Send an API command to trigger unpacking the given archive, and poll for its results.
+   * Get (the first) CreationTimestamp from the result(s), if defined.
    */
-  unpack = async (filename: string): Promise<string> => {
-    const path = `preingest/unpack/${encodeURIComponent(filename)}`;
-    const action = await this.fetchWithDefaults<TriggerActionResult>(path, { method: 'POST' });
+  getTime = (result: ActionResult | ActionResult[]): dayjs.Dayjs | undefined => {
+    return Array.isArray(result)
+      ? dayjs(result[0].CreationTimestamp)
+      : result
+      ? dayjs(result.CreationTimestamp)
+      : undefined;
+  };
 
-    // TODO this may be generic for other actions too?
-    // After firing the request to unpack the archive, it seems we need to know we need to get a
-    // a specific JSON result file?
-    const actionName = 'UnpackTarHandler';
-    const successCode = 'Unpack';
-    return this.repeatUntilResult(
-      async () => {
-        try {
-          const actionResult = await this.getActionResult(action.sessionId, actionName);
-          // TODO how do we know if there's a failure?
-          if (!Array.isArray(actionResult) && actionResult?.Code === successCode) {
-            return action.sessionId;
-          }
-          // Repeat
-          return undefined;
-        } catch (e) {
-          // TODO Fix API, which throws 500 when not ready yet?
-          // Repeat
-          console.error('Failed to get unpack status', e);
-          return undefined;
-        }
-      },
-      5000,
-      25
+  /**
+   * Send an API command to trigger an action, and poll for its (new) results.
+   *
+   * TODO For the demo, to unpack an archive sessionId must be set to the filename
+   */
+  triggerActionAndGetNewResults = async (
+    sessionId: string,
+    action: Action
+  ): Promise<ActionResult | ActionResult[]> => {
+    // TODO API this assume no old results exist; for some handlers we could get a timestamp
+    // but not for, e.g., the greenlist
+    // TODO remove after demo?
+
+    // For the UnpackTarHandler, for which we do not know the sessionId yet and hence use the
+    // filename in the URL, this would fail with a 400 Bad Request as the API expects a GUID. For
+    // many or all other handlers the API will fail with a 500 error if the file does not exist.
+    // So, swallow any exception and default to the current time.
+    const oldResult = await this.getActionResult(sessionId, action.resultFilename).catch((e) => e);
+    const oldTimestamp = this.getTime(oldResult) || dayjs();
+
+    const triggerResult = await this.fetchWithDefaults<TriggerActionResult>(
+      `preingest/${action.id}/${sessionId}`,
+      {
+        method: action.method || 'POST',
+      }
     );
+
+    // TODO API is an action always accepted?
+
+    // TODO maybe delay just a bit here?
+    return this.repeatUntilResult(async () => {
+      // For most actions, `triggerResult.sessionId` is just the same as `sessionId`. But for
+      // UnpackTarHandler we didn't have the session yet when triggering the action, so use the
+      // one we got above. Also, the following throws a 500 error as long as unpacking is not done:
+      // "Data folder with session guid '/data/2077f60f-d33e-48dc-a9bd-e57a397ae890' not found!"
+      // And if the folder exists, then requesting a non-existing result file will still throw a
+      // 500 rather than a 404. For all these cases, repeatUntilResult will schedule another try.
+      const result = await this.getActionResult(triggerResult.sessionId, action.resultFilename);
+
+      // At this point we may still have received the previous results
+      if (this.getTime(result)?.isAfter(oldTimestamp)) {
+        return result;
+      }
+      // Repeat
+      return undefined;
+    });
   };
 
   private fetchWithDefaults = async <T>(path: string, init?: RequestInit): Promise<T> => {
@@ -261,7 +396,7 @@ export class PreingestApiService {
         summary: `Error ${res.status}`,
         detail: (await res.text()) || path,
         // Set some max lifetime, as very wide error messages may hide the toast's close button
-        life: 3000,
+        life: 10000,
       });
       console.error(res);
       throw new Error(res.statusText);

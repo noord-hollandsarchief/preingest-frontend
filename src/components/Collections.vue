@@ -61,6 +61,7 @@
       <Column headerStyle="width:8rem">
         <template #body="slotProps">
           <router-link :to="`/file/${slotProps.data.name}`" style="text-decoration: none">
+            <!-- We may also have this result when the checksum was calculated but the archive was not unpacked -->
             <Button
               v-if="slotProps.data.tarResultData"
               icon="pi pi-search"
