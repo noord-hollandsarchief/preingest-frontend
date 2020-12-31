@@ -44,7 +44,8 @@ The configuration is kept in [.env](./.env) files.
 
 - Compile and hot-reload for development: `yarn serve`
 
-  This [uses a proxy](./vue.config.js) for the API, to avoid CORS limitations.
+  This [uses a proxy](./vue.config.js) for the API, to avoid CORS limitations. The default
+  configuration expects the API to be running on <http://localhost:8000/api/>.
 
 - Compile and minify for production: `yarn build`
 
@@ -54,28 +55,37 @@ The configuration is kept in [.env](./.env) files.
 
 ### Docker
 
-The [Dockerfile](./Dockerfile) creates a temporary (cached) build image, builds the project, and
-creates a final image that serves the static result using Nginx. To avoid CORS issues, this also
-[proxies API requests](./docker-nginx.conf) for <http://localhost:9000/api/> to
-<http://localhost:8000/api/>. 
+The [Dockerfile](./Dockerfile) creates a temporary (partially cached) build image, builds the
+project, and creates a final image that serves the static result using Nginx. To avoid CORS issues,
+this also [proxies](./docker-nginx.conf) `/api/*` to whatever is set in its environment variable
+`PROXY_API_DEST`. This defaults to `http://host.docker.internal:8000/api/` to delegate to port 8000
+running on your local machine.
 
-To build:
+To build and tag:
 
 ```text
 docker build -t noordhollandsarchief/preingest-frontend:development .
 ```
 
-To run on <http://localhost:9000>:
+To run on <http://localhost:9000> and proxy requests for `/api/*` to <http://localhost:8000/api/>:
 
 ```text
-docker run -it -p 9000:80 --rm --name my-name noordhollandsarchief/preingest-frontend:development
+docker run -it -p 9000:80 --rm noordhollandsarchief/preingest-frontend:development
+```
+
+To proxy to a different port or location, set `PROXY_API_DEST`:
+
+```text
+docker run -it -p 9000:80 --rm \
+  --env PROXY_API_DEST=http://host.docker.internal:55004/api/ \
+  noordhollandsarchief/preingest-frontend:development
 ```
 
 ### Linting and Prettier
 
 A pre-commit hook ensures that linting errors and formatting errors cannot be committed. Note that
 the hook uses [lint-staged](https://github.com/okonet/lint-staged), which temporarily hides unstaged
-changes to partially staged files. This may make your IDE show warnings about files that were
+changes of partially staged files. This may make your IDE show warnings about files that were
 changed outside of the IDE.
 
 Beware that Sourcetree may [silently skip](https://jira.atlassian.com/browse/SRCTREE-7184) the

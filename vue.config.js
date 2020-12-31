@@ -13,7 +13,8 @@ module.exports = {
     devServer: {
       proxy: {
         '^/api': {
-          // The matched `/api` part is also copied into the target URL:
+          // The matched `/api` part is also copied into the target URL; to change that, see
+          // https://webpack.js.org/configuration/dev-server/
           target: 'http://localhost:8000',
           changeOrigin: true,
         },

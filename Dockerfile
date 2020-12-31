@@ -1,27 +1,41 @@
-# build:
+# Build and tag:
+#
 #   docker build -t noordhollandsarchief/preingest-frontend:development .
 #
-# run, expose on port 9000:
-#   docker run -it -p 9000:80 noordhollandsarchief/preingest-frontend:development
+# Run on port 9000, and proxy /api/* to http://localhost:8000/api/ on your machine:
+#
+#   docker run -it -p 9000:80 --rm noordhollandsarchief/preingest-frontend:development
+#
+# Run on port 9000, and proxy /api/* to http://localhost:55004/api/ on your machine:
+#
+#   docker run -it -p 9000:80 --rm \
+#     --env PROXY_API_DEST=http://host.docker.internal:55004/api/ \
+#     noordhollandsarchief/preingest-frontend:development
 
-# Temporary (cached) build image
+# Temporary (partially cached) build image
 FROM node:lts-alpine as build
 WORKDIR /app
 COPY package.json ./
 COPY yarn.lock ./
 RUN yarn install
 
-# To take advantage of caching until package.json or yarn.lock changes: only now copy all else into the build image.
-# See also http://bitjudo.com/blog/2014/03/13/building-efficient-dockerfiles-node-dot-js/
+# To take advantage of caching until package.json or yarn.lock changes: only now copy
+# all else into the build image, and build.
+# See http://bitjudo.com/blog/2014/03/13/building-efficient-dockerfiles-node-dot-js/
 COPY . .
 RUN yarn build
 
 # Final target image
-FROM nginx:stable-alpine as production-stage
+FROM nginx:stable-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Boldly overwite whatever default is in the base image
-COPY docker-nginx.conf /etc/nginx/conf.d/default.conf
+# When starting Nginx it will perform variable substition in the template and copy
+# the result into `/etc/nginx/conf.d/default.conf`, so boldly replacing the original
+# configuration; see https://hub.docker.com/_/nginx
+COPY docker-nginx.conf /etc/nginx/templates/default.conf.template
+COPY docker-defaults.sh /
 
 EXPOSE 80
+# This will delegate to the original docker-entrypoint.sh
+ENTRYPOINT ["/docker-defaults.sh"]
 CMD ["nginx", "-g", "daemon off;"]
