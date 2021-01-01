@@ -29,13 +29,16 @@ RUN yarn build
 FROM nginx:stable-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# When starting Nginx it will perform variable substition in the template and copy
-# the result into `/etc/nginx/conf.d/default.conf`, so boldly replacing the original
-# configuration; see https://hub.docker.com/_/nginx
+# Each time Nginx is started it will perform variable substition in all template
+# files found in `/etc/nginx/templates/*.template`, and copy the results (without
+# the `.template` suffix) into `/etc/nginx/conf.d/`. Below, this will replace the
+# original `/etc/nginx/conf.d/default.conf`; see https://hub.docker.com/_/nginx
 COPY docker-nginx.conf /etc/nginx/templates/default.conf.template
 COPY docker-defaults.sh /
+# Just in case the file mode was not properly set in Git
+RUN chmod +x /docker-defaults.sh
 
 EXPOSE 80
-# This will delegate to the original docker-entrypoint.sh
+# This will delegate to the original `docker-entrypoint.sh`
 ENTRYPOINT ["/docker-defaults.sh"]
 CMD ["nginx", "-g", "daemon off;"]
