@@ -154,7 +154,6 @@ type Step = Action & {
   selected?: boolean;
   // A fixed value for selected (false forces the step to always be non-selected)
   fixedSelected?: boolean;
-  lastFetchedStatus?: ActionStatus;
   downloadUrl?: string;
   /**
    * A custom function to trigger an action; if not set then {@link triggerActionAndGetNewResults} is used
@@ -219,7 +218,7 @@ export default defineComponent({
         .map((a) => ({ ...a, ...extendedSteps.find((e) => e.id === a.id) }))
     );
 
-    // Force `selected` to match `fixSelected`, in case the definition above is not consistent; this
+    // Force `selected` to match `fixSelected`, in case the extension above is not consistent; this
     // does not also force-select/unselect any dependencies or dependents
     steps.value.forEach((step) => (step.selected = step.fixedSelected ?? step.selected));
     selectedSteps.value = steps.value.filter((step) => step.selected);
@@ -304,45 +303,38 @@ export default defineComponent({
     },
   },
   watch: {
-    // TODO fix updating status tags
-    // When selecting/unselecting a single item, this is invoked after onStepSelect/onStepUnselect,
-    // after any dependencies have been selected/unselected
+    /**
+     * Propagate (un)selection (including the Select All checkbox) into the Steps' `selected`
+     * attributes, and ensure no steps are (un)selected that are frozen due to `fixedSelected`.
+     *
+     * When (un)selecting a single item, this watch is invoked after onStepSelect/onStepUnselect,
+     * so after `selectedSteps` has already been altered for any dependencies/dependents.
+     */
     selectedSteps(selected: Step[]) {
-      // To avoid endless recursive updates, determine if updating is needed
-      const forceUpdate = this.steps
-        .filter((step) => step.fixedSelected !== undefined)
-        .some((step) => !!selected.find((s) => s.id === step.id) !== step.fixedSelected);
+      const inSelected = (step: Step) => selected.some((s) => s.id === step.id);
 
-      if (forceUpdate) {
-        // Copy the new selection state into the steps, unless the value is fixed
-        this.steps.forEach(
-          (step: Step) =>
-            (step.selected = step.fixedSelected ?? selected.some((item) => item.id === step.id))
-        );
-        // Triggers this very watch again
+      this.steps.forEach((step: Step) => {
+        step.selected = step.fixedSelected ?? inSelected(step);
+        step.status = step.selected ? 'wait' : step.lastFetchedStatus;
+      });
+
+      // To avoid endless recursive updates, only change `selectedSteps` if needed
+      if (this.steps.some((step) => step.selected !== inSelected(step))) {
+        // Eventually triggers this very watch again
         this.selectedSteps = this.steps.filter((step) => step.selected);
       }
     },
   },
   methods: {
     // TODO merge the watcher with the following
-    // These events are not emitted when using the select all checkbox
+    // These events are not emitted when using the Select All checkbox
     onStepSelect(event: SelectionEvent) {
-      const step = event.data;
-      step.selected = true;
-      step.status = 'wait';
-      const dependencies = getDependencies(step, this.steps);
-      dependencies.forEach((dependency) => (dependency.selected = true));
-      // This does not cause the watcher for selectedSteps to be triggered twice
-      // TODO set status for those too?
+      const dependencies = getDependencies(event.data, this.steps);
+      // This triggers the watcher for selectedSteps
       this.selectedSteps = [...new Set([...this.selectedSteps, ...dependencies])];
     },
     onStepUnselect(event: SelectionEvent) {
-      const step = event.data;
-      step.selected = false;
-      step.status = step.lastFetchedStatus;
-      const dependents = getDependents(step, this.steps);
-      dependents.forEach((dependent) => (dependent.selected = false));
+      const dependents = getDependents(event.data, this.steps);
       this.selectedSteps = this.selectedSteps.filter(
         (step) => !dependents.some((d) => d.id === step.id)
       );
@@ -360,8 +352,7 @@ export default defineComponent({
       // TODO freeze GUI
       // Simply run in the given order, one by one
       for (const step of this.steps) {
-        // this.selectedSteps does not use the same order as defined in this.steps
-        if (this.selectedSteps.find((s) => s.id === step.id)) {
+        if (step.selected) {
           step.status = 'running';
           try {
             step.result = await (step.triggerFn

@@ -41,6 +41,7 @@ export type Action = DependentItem & {
   method?: string;
   result?: ActionResult | ActionResult[];
   status?: ActionStatus;
+  lastFetchedStatus?: ActionStatus;
 };
 
 /**
