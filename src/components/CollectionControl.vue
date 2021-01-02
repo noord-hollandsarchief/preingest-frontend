@@ -87,6 +87,7 @@
       v-model:expandedRows="expandedRows"
       @row-select="onStepSelect"
       @row-unselect="onStepUnselect"
+      @row-expand="onStepExpand"
       class="p-datatable-sm"
       :rowClass="rowClass"
     >
@@ -102,6 +103,24 @@
           </span>
         </template>
       </Column>
+
+      <Column
+        field="lastStartDateTime"
+        header="Start"
+        headerClass="p-text-center"
+        bodyClass="p-text-center"
+      >
+        <template #body="slotProps">
+          {{ formatDateString(slotProps.data.lastStartDateTime) }}
+        </template>
+      </Column>
+
+      <Column
+        field="lastDuration"
+        header="Doorlooptijd"
+        headerClass="p-text-center"
+        bodyClass="p-text-center"
+      ></Column>
 
       <Column field="status" header="Status" headerClass="p-text-center" bodyClass="p-text-center">
         <template #body="slotProps">
@@ -137,8 +156,6 @@ import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
 import {
-  ActionResult,
-  GreenListActionResult,
   Collection,
   checksumTypes,
   ActionStatus,
@@ -147,22 +164,30 @@ import {
 } from '@/services/PreingestApiService';
 import { getDependencies, getDependents } from '@/utils/dependentList';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
-import dayjs from 'dayjs';
 
 type Step = Action & {
   // The initial or current selection state
   selected?: boolean;
-  // A fixed value for selected (false forces the step to always be non-selected)
+  /**
+   * A fixed value for selected (`false` forces the step to always be non-selected), typically set
+   * to `false` when a step has completed unless `allowRestart` is enabled.
+   */
   fixedSelected?: boolean;
+  allowRestart?: boolean;
   downloadUrl?: string;
   /**
-   * A custom function to trigger an action; if not set then {@link triggerActionAndGetNewResults} is used
+   * A custom function to trigger an action; if not set then {@link triggerActionAndWaitForCompleted}
+   * is used.
    */
-  triggerFn?: (step: Step) => Promise<ActionResult | ActionResult[]>;
+  triggerFn?: (step: Step) => Promise<ActionStatus>;
 };
 
 interface SelectionEvent {
   originalEvent: Event;
+  data: Step;
+}
+
+interface RowExpandEvent {
   data: Step;
 }
 
@@ -189,28 +214,30 @@ export default defineComponent({
       });
     };
 
-    const calculateChecksum = async (step: Step): Promise<ActionResult> => {
+    const calculateChecksum = async (step: Step): Promise<ActionStatus> => {
       // TODO enforce
       if (!collection.value || !collection.value.checksumType) {
         throw Error('TODO: enforce checksum type selection');
       }
       const result = await api.getChecksum(collection.value.name, collection.value.checksumType);
       collection.value.calculatedChecksum = result.message;
-      return result;
+      return 'success';
     };
 
-    const unpack = async (step: Step): Promise<ActionResult | ActionResult[]> => {
+    const unpack = async (step: Step): Promise<ActionStatus> => {
       if (!collection.value) {
         throw Error('Programming error: unpacking needs a file name');
       }
       // The sessionId is the filename here
-      return api.triggerActionAndGetNewResults(encodeURIComponent(collection.value.name), step);
+      return api.triggerActionAndWaitForCompleted(encodeURIComponent(collection.value.name), step);
     };
 
     const hiddenActions = ['reporting/droid'];
     const extendedSteps: Partial<Step>[] = [
-      { id: 'calculate', triggerFn: calculateChecksum },
+      // TODO custom function for calculate checksum needed?
+      { id: 'calculate', allowRestart: true, triggerFn: calculateChecksum },
       { id: 'unpack', triggerFn: unpack },
+      { id: 'virusscan', allowRestart: true },
     ];
     const steps = ref<Step[]>(
       actions
@@ -228,6 +255,7 @@ export default defineComponent({
       collection.value = c;
 
       // This may also exist when the checksum was calculated but the archive was not unpacked
+      // TODO API make this work like any other action
       const checksumStep = steps.value.find((s) => s.id === 'calculate');
       if (checksumStep) {
         checksumStep.result = c.tarResultData.find(
@@ -243,43 +271,38 @@ export default defineComponent({
 
       const sessionId = c.unpackSessionId;
       if (sessionId) {
-        const unpackStep = steps.value.find((s) => s.id === 'unpack');
-        if (unpackStep) {
-          unpackStep.selected = true;
-          unpackStep.fixedSelected = false;
-          selectedSteps.value = steps.value.filter((step) => step.selected);
-        }
+        await api.updateActionResults(sessionId, steps.value, true);
+        steps.value.forEach(
+          // Allow the checksum to be recalculated any time
+          (step) =>
+            (step.fixedSelected =
+              !step.allowRestart && step.status === 'success' ? false : undefined)
+        );
 
-        const resultFiles = await api.getResultFilenames(sessionId);
-        resultFiles.forEach((name) => {
-          const step = steps.value.find((s) => s.resultFilename === name);
-          if (step) {
-            step.status = 'success';
-            if (name.endsWith('.json')) {
-              api.getActionResult(sessionId, name).then((json) => {
-                step.result = json;
-                // TODO Get generic API results or move into definition of steps
-                switch (step.id) {
-                  case 'MetadataValidation':
-                    step.status =
-                      Array.isArray(step.result) && step.result.length > 0 ? 'error' : 'success';
-                    break;
-                  case 'GreenList':
-                    step.status =
-                      Array.isArray(step.result) &&
-                      step.result.some((r) => (r as GreenListActionResult).InGreenList === false)
-                        ? 'error'
-                        : 'success';
-                    break;
-                }
-              });
-            } else {
-              step.downloadUrl = api.getActionReportUrl(sessionId, name);
-            }
-            step.resultFilename = name;
-            step.lastFetchedStatus = step.status;
-          }
-        });
+        // TODO copy old workarounds into service
+        // const resultFiles = await api.getResultFilenames(sessionId);
+        // resultFiles.forEach((name) => {
+        //   const step = steps.value.find((s) => s.resultFilename === name);
+        //   if (step) {
+        //     step.status = 'success';
+        //     if (name.endsWith('.json')) {
+        //       api.getActionResult(sessionId, name).then((json) => {
+        //         step.result = json;
+        //         // TODO Get generic API results or move into definition of steps
+        //         switch (step.id) {
+        //           case 'MetadataValidation':
+        //             step.status =
+        //               Array.isArray(step.result) && step.result.length > 0 ? 'error' : 'success';
+        //             break;
+        //           case 'GreenList':
+        //             step.status =
+        //               Array.isArray(step.result) &&
+        //               step.result.some((r) => (r as GreenListActionResult).InGreenList === false)
+        //                 ? 'error'
+        //                 : 'success';
+        //             break;
+        //         }
+        //       });
       }
     });
 
@@ -339,10 +362,27 @@ export default defineComponent({
         (step) => !dependents.some((d) => d.id === step.id)
       );
     },
-    rowClass(data: Step) {
+    onStepExpand(event: RowExpandEvent) {
+      const step = event.data;
+      if (this.collection && step.hasResultFile && !step.result && !step.downloadUrl) {
+        if (step.resultFilename.endsWith('.json')) {
+          this.api
+            .getActionResult(this.collection.unpackSessionId, step.resultFilename)
+            .then((json) => {
+              step.result = json;
+            });
+        } else {
+          step.downloadUrl = this.api.getActionReportUrl(
+            this.collection.unpackSessionId,
+            step.resultFilename
+          );
+        }
+      }
+    },
+    rowClass(step: Step) {
       return {
-        'selection-disabled': data.fixedSelected !== undefined,
-        'expander-disabled': !data.result && !data.downloadUrl,
+        'selection-disabled': step.fixedSelected !== undefined,
+        'expander-disabled': !step.hasResultFile && !step.result && !step.downloadUrl,
       };
     },
     async runSelected() {
@@ -355,11 +395,9 @@ export default defineComponent({
         if (step.selected) {
           step.status = 'running';
           try {
-            step.result = await (step.triggerFn
+            step.status = await (step.triggerFn
               ? step.triggerFn(step)
-              : this.api.triggerActionAndGetNewResults(this.collection.unpackSessionId, step));
-            // TODO API make fn return the status
-            step.status = 'success';
+              : this.api.triggerActionAndWaitForCompleted(this.collection.unpackSessionId, step));
             step.lastFetchedStatus = step.status;
           } catch (e) {
             this.toast.add({

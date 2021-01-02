@@ -14,6 +14,7 @@
 // See https://github.com/primefaces/primevue/issues/813
 import { useToast } from 'primevue/components/toast/useToast';
 import { DependentItem } from '@/utils/dependentList';
+import { formatDateDifference } from '@/utils/formatters';
 import dayjs from 'dayjs';
 
 export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
@@ -31,27 +32,36 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
   { name: 'SHA-512', code: 'SHA512' },
 ];
 
+// 'wait' is currently only known in the frontend, which controls the queue
 export type ActionStatus = 'wait' | 'running' | 'success' | 'error' | 'failed';
 
 export type Action = DependentItem & {
+  name: string;
   description: string;
   info?: string;
   resultFilename: string;
   // The HTTP method, default POST
   method?: string;
   result?: ActionResult | ActionResult[];
+  lastStartDateTime?: string;
+  lastEndDateTime?: string;
+  lastDuration?: string;
   status?: ActionStatus;
   lastFetchedStatus?: ActionStatus;
+  hasResultFile?: boolean;
 };
 
 /**
  * The actions supported by this API. The `id` must match the URL path, like `virusscan` in
  * `/preingest/virusscan/:guid` and like `reporting/pdf` for `/preingest/reporting/:type/:guid`
+ * The `name` must match the name in the status results, like `Virusscan` and `Droid - PDF report`.
  */
 export const actions: Action[] = [
   {
     id: 'calculate',
     dependsOn: [],
+    // TODO validate name as soon as API supports this
+    name: 'TODO calculate',
     resultFilename: 'ContainerChecksumHandler.json',
     method: 'GET',
     description: 'Checksum berekenen',
@@ -59,6 +69,7 @@ export const actions: Action[] = [
   {
     id: 'unpack',
     dependsOn: [],
+    name: 'Unpack',
     resultFilename: 'UnpackTarHandler.json',
     description: 'Archief uitpakken',
     info:
@@ -67,18 +78,21 @@ export const actions: Action[] = [
   {
     id: 'virusscan',
     dependsOn: ['unpack'],
+    name: 'Virusscan',
     resultFilename: 'ScanVirusValidationHandler.json',
     description: 'Viruscontrole',
   },
   {
     id: 'naming',
     dependsOn: ['unpack'],
+    name: 'Naming',
     resultFilename: 'NamingValidationHandler.json',
     description: 'Bestandsnamen controleren',
   },
   {
     id: 'sidecar',
     dependsOn: ['unpack'],
+    name: 'Sidecar',
     // TODO API multiple files? We (also) need single file for result
     resultFilename: 'SidecarValidationHandler_Samenvatting.json',
     description: 'Mappen en bestanden controleren op sidecarstructuur',
@@ -86,48 +100,57 @@ export const actions: Action[] = [
   {
     id: 'profiling',
     dependsOn: ['unpack'],
+    name: 'Droid - Profiling',
     resultFilename: 'DroidValidationHandler.droid',
     description: 'DROID bestandsclassificatie voorbereiden',
   },
   {
     id: 'exporting',
     dependsOn: ['profiling'],
+    name: 'Droid - CSV report',
     resultFilename: 'DroidValidationHandler.csv',
     description: 'DROID metagegevens exporteren naar CSV',
   },
   {
     id: 'reporting/droid',
     dependsOn: ['profiling'],
+    // TODO validate name as soon API supports this
+    name: 'TODO Droid - Droid report',
     resultFilename: 'DroidValidationHandler.droid',
     description: 'DROID metagegevens exporteren',
   },
   {
     id: 'reporting/pdf',
     dependsOn: ['profiling'],
+    name: 'Droid - PDF report',
     resultFilename: 'DroidValidationHandler.pdf',
     description: 'DROID metagegevens exporteren naar PDF',
   },
   {
     id: 'reporting/planets',
     dependsOn: ['profiling'],
+    name: 'Droid - Planets XML report',
     resultFilename: 'DroidValidationHandler.planets.xml',
     description: 'DROID metagegevens exporteren naar XML',
   },
   {
     id: 'greenlist',
     dependsOn: ['exporting'],
+    name: 'Greenlist',
     resultFilename: 'GreenListHandler.json',
     description: 'Controleren of alle bestandstypen aan greenlist voldoen',
   },
   {
     id: 'encoding',
     dependsOn: ['unpack'],
+    name: 'Encoding',
     resultFilename: 'EncodingHandler.json',
     description: 'Encoding metadatabestanden controleren',
   },
   {
     id: 'validate',
     dependsOn: ['unpack'],
+    name: 'Metadata',
     resultFilename: 'MetadataValidationHandler.json',
     description: 'Metadata valideren met XML-schema (XSD) en Schematron',
   },
@@ -135,6 +158,7 @@ export const actions: Action[] = [
     id: 'transform',
     // If ever running tasks in parallel, then greenlist needs to be run first, if selected
     dependsOn: ['unpack'],
+    name: 'TransformXIP',
     resultFilename: 'TransformationHandler.json',
     description: 'Metadatabestanden omzetten naar XIP bestandsformaat',
     info:
@@ -143,6 +167,8 @@ export const actions: Action[] = [
   {
     id: 'sip',
     dependsOn: ['transform'],
+    // TODO validate name when API supports this
+    name: 'TODO SIP',
     resultFilename: 'TODO',
     description: 'Bestanden omzetten naar SIP bestandsformaat',
   },
@@ -189,6 +215,27 @@ export type ActionResult = {
 
 export type GreenListActionResult = ActionResult & { InGreenList?: boolean };
 
+// A simplified response of the /api/status/result/:actionGuid API, excluding all GUIDs
+export type StatusResult = {
+  // Failed is often/always followed by Completed
+  name: 'Started' | 'Failed' | 'Completed';
+  // API why not creationTimestamp to match other APIs?
+  creation: string;
+};
+
+// TODO API Why are there so many GUIDs in this response, requiring excessive nesting?
+// A simplified response of the /api/status/complete/:guid API, excluding all GUIDs
+export type CompleteStatusResult = {
+  session: {
+    // A name like `Virusscan` and `Droid - PDF report`
+    name: string;
+  };
+  status: StatusResult;
+  message?: {
+    description: string;
+  };
+};
+
 export class PreingestApiService {
   private toast = useToast();
   private baseUrl = process.env.VUE_APP_PREINGEST_API;
@@ -204,9 +251,8 @@ export class PreingestApiService {
     let tries = 0;
     while (dayjs().isBefore(endTime)) {
       if (tries > 0) {
-        // TODO maybe a (small) initial delay is useful too, when an action has just been fired?
-        // Simple exponential backoff, with a maximum of 5 seconds between retries
-        await this.delay(Math.min(10 ** tries, 5000));
+        // To easily show the elapsed time, we cannot use some, e.g., exponential backoff
+        await this.delay(750);
       }
       tries++;
       try {
@@ -318,15 +364,73 @@ export class PreingestApiService {
       : undefined;
   };
 
+  updateActionResults = async (
+    sessionId: string,
+    actions: Action[],
+    checkResultFiles = false
+  ): Promise<void> => {
+    // actions.forEach((a) => (a.status = undefined));
+
+    const [results, resultFiles] = (await Promise.all([
+      this.fetchWithDefaults(`status/complete/${sessionId}`),
+      checkResultFiles ? this.getResultFilenames(sessionId) : Promise.resolve([]),
+    ])) as [CompleteStatusResult[], string[]];
+
+    actions.forEach((action) => {
+      // The full status results include all start, complete and error events for all invocation of
+      // each action. So: filter to get the last, if any.
+      const actionResults = results.filter((result) => result.session.name === action.name);
+      // TODO API is this sorted?
+      if (actionResults.length > 0) {
+        // If an action fails badly, then the API will return Started, Failed and Completed. If an
+        // action completes normally, then ... TODO API what to expect?
+        const lastStart = actionResults.reduce((acc, result) => {
+          return result.status.name === 'Started' && result.status.creation > acc.status.creation
+            ? result
+            : acc;
+        });
+        const lastFailed = actionResults.find((action) => {
+          return (
+            action.status.name === 'Failed' && action.status.creation >= lastStart.status.creation
+          );
+        });
+        const lastCompleted = actionResults.find((action) => {
+          return (
+            action.status.name === 'Completed' &&
+            action.status.creation >= lastStart.status.creation
+          );
+        });
+        action.lastFetchedStatus = lastFailed ? 'failed' : lastCompleted ? 'success' : 'running';
+        action.status = action.status === 'wait' ? action.status : action.lastFetchedStatus;
+
+        // TODO API remove timezone workaround
+        action.lastStartDateTime = lastStart.status.creation + 'Z';
+        action.lastEndDateTime = lastFailed?.status?.creation || lastCompleted?.status?.creation;
+        if (action.lastEndDateTime) {
+          // TODO API remove workaround
+          action.lastEndDateTime += 'Z';
+        }
+        // Will yield the time up to now if not Completed/Failed yet
+        action.lastDuration = formatDateDifference(
+          action.lastStartDateTime,
+          action.lastEndDateTime
+        );
+
+        action.hasResultFile = resultFiles.some((name) => name === action.resultFilename);
+        // TODO copy the message as well? Especially for (fatal) errors?
+      }
+    });
+  };
+
   /**
    * Send an API command to trigger an action, and poll for its (new) results.
    *
    * TODO For the demo, to unpack an archive sessionId must be set to the filename
    */
-  triggerActionAndGetNewResults = async (
+  triggerActionAndWaitForCompleted = async (
     sessionId: string,
     action: Action
-  ): Promise<ActionResult | ActionResult[]> => {
+  ): Promise<ActionStatus> => {
     // TODO API this assume no old results exist; for some handlers we could get a timestamp
     // but not for, e.g., the greenlist
     // TODO remove after demo?
@@ -335,8 +439,8 @@ export class PreingestApiService {
     // filename in the URL, this would fail with a 400 Bad Request as the API expects a GUID. For
     // many or all other handlers the API will fail with a 500 error if the file does not exist.
     // So, swallow any exception and default to the current time.
-    const oldResult = await this.getActionResult(sessionId, action.resultFilename).catch((e) => e);
-    const oldTimestamp = this.getTime(oldResult) || dayjs();
+    // const oldResult = await this.getActionResult(sessionId, action.resultFilename).catch((e) => e);
+    // const oldTimestamp = this.getTime(oldResult) || dayjs();
 
     const triggerResult = await this.fetchWithDefaults<TriggerActionResult>(
       `preingest/${action.id}/${sessionId}`,
@@ -347,19 +451,25 @@ export class PreingestApiService {
 
     // TODO API is an action always accepted?
 
+    // TODO maybe these also need to be cleared when using custom triggerFn?
+    action.result = undefined;
+    action.hasResultFile = false;
+    action.lastStartDateTime = dayjs().toISOString();
+    action.lastEndDateTime = undefined;
+
     // TODO maybe delay just a bit here?
     return this.repeatUntilResult(async () => {
-      // For most actions, `triggerResult.sessionId` is just the same as `sessionId`. But for
-      // UnpackTarHandler we didn't have the session yet when triggering the action, so use the
-      // one we got above. Also, the following throws a 500 error as long as unpacking is not done:
-      // "Data folder with session guid '/data/2077f60f-d33e-48dc-a9bd-e57a397ae890' not found!"
-      // And if the folder exists, then requesting a non-existing result file will still throw a
-      // 500 rather than a 404. For all these cases, repeatUntilResult will schedule another try.
-      const result = await this.getActionResult(triggerResult.sessionId, action.resultFilename);
-
-      // At this point we may still have received the previous results
-      if (this.getTime(result)?.isAfter(oldTimestamp)) {
-        return result;
+      // Compute duration up to now
+      action.lastDuration = formatDateDifference(action.lastStartDateTime || '');
+      const results: StatusResult[] = await this.fetchWithDefaults(
+        `status/result/${triggerResult.actionId}`
+      );
+      if (results[results.length - 1].name === 'Completed') {
+        // TODO merge with other code that determines this
+        action.hasResultFile = true;
+        // TODO make API return success/error
+        // We may have gotten Started, Failed, Completed
+        return results.some((result) => result.name === 'Failed') ? 'error' : 'success';
       }
       // Repeat
       return undefined;
@@ -413,14 +523,14 @@ export class PreingestApiService {
 
   // TODO remove debug toast
   private debug = (data: { [index: string]: unknown }, path?: string) => {
-    if (Array.isArray(data)) {
-      this.toast.add({
-        severity: 'info',
-        summary: path ?? 'Pre-ingest API',
-        detail: `${data.length} ${data.length === 1 ? 'resultaat' : 'resultaten'}`,
-        life: 2000,
-      });
-    }
+    // if (Array.isArray(data)) {
+    //   this.toast.add({
+    //     severity: 'info',
+    //     summary: path ?? 'Pre-ingest API',
+    //     detail: `${data.length} ${data.length === 1 ? 'resultaat' : 'resultaten'}`,
+    //     life: 2000,
+    //   });
+    // }
   };
   //   const keys = Object.keys(data);
   //   const firstChild = data[keys[0]];
