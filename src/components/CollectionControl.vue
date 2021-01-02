@@ -94,27 +94,28 @@
 
       <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
-      <Column field="name" header="Actie">
+      <Column field="description" header="Actie">
         <template #body="slotProps">
           <span v-tooltip="slotProps.data.info">
-            {{ slotProps.data.name }} <i v-if="slotProps.data.info" class="pi pi-info-circle"></i>
+            {{ slotProps.data.description }}
+            <i v-if="slotProps.data.info" class="pi pi-info-circle"></i>
           </span>
         </template>
       </Column>
 
-      <Column field="state" header="Status" headerClass="p-text-center" bodyClass="p-text-center">
+      <Column field="status" header="Status" headerClass="p-text-center" bodyClass="p-text-center">
         <template #body="slotProps">
-          <Tag v-if="slotProps.data.state === 'wait'" severity="info">wachtrij</Tag>
-          <Tag v-else-if="slotProps.data.state === 'running'" severity="warning">bezig</Tag>
-          <Tag v-else-if="slotProps.data.state === 'success'" severity="success">gereed</Tag>
+          <Tag v-if="slotProps.data.status === 'wait'" severity="info">wachtrij</Tag>
+          <Tag v-else-if="slotProps.data.status === 'running'" severity="warning">bezig</Tag>
+          <Tag v-else-if="slotProps.data.status === 'success'" severity="success">gereed</Tag>
           <Tag
-            v-else-if="slotProps.data.state === 'error'"
+            v-else-if="slotProps.data.status === 'error'"
             severity="danger"
             v-tooltip="'De actie is uitgevoerd, maar er zijn fouten gevonden'"
             >fout</Tag
           >
           <Tag
-            v-else-if="slotProps.data.state === 'failed'"
+            v-else-if="slotProps.data.status === 'failed'"
             severity="danger"
             v-tooltip="'De actie kon niet worden uitgevoerd'"
             >onbekend</Tag
@@ -140,6 +141,7 @@ import {
   GreenListActionResult,
   Collection,
   checksumTypes,
+  ActionStatus,
   Action,
   actions,
 } from '@/services/PreingestApiService';
@@ -147,15 +149,12 @@ import { getDependencies, getDependents } from '@/utils/dependentList';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
 import dayjs from 'dayjs';
 
-type StepState = 'wait' | 'running' | 'success' | 'error' | 'failed';
-
 type Step = Action & {
   // The initial or current selection state
   selected?: boolean;
   // A fixed value for selected (false forces the step to always be non-selected)
   fixedSelected?: boolean;
-  state?: StepState;
-  lastFetchedState?: StepState;
+  lastFetchedStatus?: ActionStatus;
   downloadUrl?: string;
   /**
    * A custom function to trigger an action; if not set then {@link triggerActionAndGetNewResults} is used
@@ -203,7 +202,7 @@ export default defineComponent({
 
     const unpack = async (step: Step): Promise<ActionResult | ActionResult[]> => {
       if (!collection.value) {
-        throw Error('Programming error: unpacking needds a file name');
+        throw Error('Programming error: unpacking needs a file name');
       }
       // The sessionId is the filename here
       return api.triggerActionAndGetNewResults(encodeURIComponent(collection.value.name), step);
@@ -236,9 +235,9 @@ export default defineComponent({
           (r) => r.actionName === 'ContainerChecksumHandler'
         );
         // TODO API Why do we get "message": "Geen resultaten."`?
-        checksumStep.lastFetchedState =
+        checksumStep.lastFetchedStatus =
           checksumStep.result?.message === 'Geen resultaten.' ? 'error' : 'success';
-        checksumStep.state = checksumStep.lastFetchedState;
+        checksumStep.status = checksumStep.lastFetchedStatus;
         // E.g. `"message": "SHA1 : cc8d8a7d1de976bc94f7baba4c24409817f296c1"`
         collection.value.calculatedChecksum = checksumStep.result?.message;
       }
@@ -256,18 +255,18 @@ export default defineComponent({
         resultFiles.forEach((name) => {
           const step = steps.value.find((s) => s.resultFilename === name);
           if (step) {
-            step.state = 'success';
+            step.status = 'success';
             if (name.endsWith('.json')) {
               api.getActionResult(sessionId, name).then((json) => {
                 step.result = json;
                 // TODO Get generic API results or move into definition of steps
                 switch (step.id) {
                   case 'MetadataValidation':
-                    step.state =
+                    step.status =
                       Array.isArray(step.result) && step.result.length > 0 ? 'error' : 'success';
                     break;
                   case 'GreenList':
-                    step.state =
+                    step.status =
                       Array.isArray(step.result) &&
                       step.result.some((r) => (r as GreenListActionResult).InGreenList === false)
                         ? 'error'
@@ -279,7 +278,7 @@ export default defineComponent({
               step.downloadUrl = api.getActionReportUrl(sessionId, name);
             }
             step.resultFilename = name;
-            step.lastFetchedState = step.state;
+            step.lastFetchedStatus = step.status;
           }
         });
       }
@@ -305,7 +304,7 @@ export default defineComponent({
     },
   },
   watch: {
-    // TODO fix updating state tags
+    // TODO fix updating status tags
     // When selecting/unselecting a single item, this is invoked after onStepSelect/onStepUnselect,
     // after any dependencies have been selected/unselected
     selectedSteps(selected: Step[]) {
@@ -331,17 +330,17 @@ export default defineComponent({
     onStepSelect(event: SelectionEvent) {
       const step = event.data;
       step.selected = true;
-      step.state = 'wait';
+      step.status = 'wait';
       const dependencies = getDependencies(step, this.steps);
       dependencies.forEach((dependency) => (dependency.selected = true));
       // This does not cause the watcher for selectedSteps to be triggered twice
-      // TODO set state for those too?
+      // TODO set status for those too?
       this.selectedSteps = [...new Set([...this.selectedSteps, ...dependencies])];
     },
     onStepUnselect(event: SelectionEvent) {
       const step = event.data;
       step.selected = false;
-      step.state = step.lastFetchedState;
+      step.status = step.lastFetchedStatus;
       const dependents = getDependents(step, this.steps);
       dependents.forEach((dependent) => (dependent.selected = false));
       this.selectedSteps = this.selectedSteps.filter(
@@ -363,21 +362,21 @@ export default defineComponent({
       for (const step of this.steps) {
         // this.selectedSteps does not use the same order as defined in this.steps
         if (this.selectedSteps.find((s) => s.id === step.id)) {
-          step.state = 'running';
+          step.status = 'running';
           try {
             step.result = await (step.triggerFn
               ? step.triggerFn(step)
               : this.api.triggerActionAndGetNewResults(this.collection.unpackSessionId, step));
-            // TODO API make fn return the state
-            step.state = 'success';
-            step.lastFetchedState = step.state;
+            // TODO API make fn return the status
+            step.status = 'success';
+            step.lastFetchedStatus = step.status;
           } catch (e) {
             this.toast.add({
               severity: 'error',
               summary: 'Mislukt',
               detail: e,
             });
-            step.state = 'failed';
+            step.status = 'failed';
             // TODO Stop processing further results?
           }
           // TODO unselect? If we do, we can no longer tell what we did?

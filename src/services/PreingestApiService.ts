@@ -31,13 +31,16 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
   { name: 'SHA-512', code: 'SHA512' },
 ];
 
+export type ActionStatus = 'wait' | 'running' | 'success' | 'error' | 'failed';
+
 export type Action = DependentItem & {
-  name: string;
+  description: string;
   info?: string;
   resultFilename: string;
   // The HTTP method, default POST
   method?: string;
   result?: ActionResult | ActionResult[];
+  status?: ActionStatus;
 };
 
 /**
@@ -50,13 +53,13 @@ export const actions: Action[] = [
     dependsOn: [],
     resultFilename: 'ContainerChecksumHandler.json',
     method: 'GET',
-    name: 'Checksum berekenen',
+    description: 'Checksum berekenen',
   },
   {
     id: 'unpack',
     dependsOn: [],
     resultFilename: 'UnpackTarHandler.json',
-    name: 'Archief uitpakken',
+    description: 'Archief uitpakken',
     info:
       'Omdat de resultaten worden opgeslagen in het uitgepakte archief, kan een archiefbestand na uitpakken niet opnieuw worden uitgepakt',
   },
@@ -64,75 +67,75 @@ export const actions: Action[] = [
     id: 'virusscan',
     dependsOn: ['unpack'],
     resultFilename: 'ScanVirusValidationHandler.json',
-    name: 'Viruscontrole',
+    description: 'Viruscontrole',
   },
   {
     id: 'naming',
     dependsOn: ['unpack'],
     resultFilename: 'NamingValidationHandler.json',
-    name: 'Bestandsnamen controleren',
+    description: 'Bestandsnamen controleren',
   },
   {
     id: 'sidecar',
     dependsOn: ['unpack'],
     // TODO API multiple files? We (also) need single file for result
     resultFilename: 'SidecarValidationHandler_Samenvatting.json',
-    name: 'Mappen en bestanden controleren op sidecarstructuur',
+    description: 'Mappen en bestanden controleren op sidecarstructuur',
   },
   {
     id: 'profiling',
     dependsOn: ['unpack'],
     resultFilename: 'DroidValidationHandler.droid',
-    name: 'DROID bestandsclassificatie voorbereiden',
+    description: 'DROID bestandsclassificatie voorbereiden',
   },
   {
     id: 'exporting',
     dependsOn: ['profiling'],
     resultFilename: 'DroidValidationHandler.csv',
-    name: 'DROID metagegevens exporteren naar CSV',
+    description: 'DROID metagegevens exporteren naar CSV',
   },
   {
     id: 'reporting/droid',
     dependsOn: ['profiling'],
     resultFilename: 'DroidValidationHandler.droid',
-    name: 'DROID metagegevens exporteren',
+    description: 'DROID metagegevens exporteren',
   },
   {
     id: 'reporting/pdf',
     dependsOn: ['profiling'],
     resultFilename: 'DroidValidationHandler.pdf',
-    name: 'DROID metagegevens exporteren naar PDF',
+    description: 'DROID metagegevens exporteren naar PDF',
   },
   {
     id: 'reporting/planets',
     dependsOn: ['profiling'],
     resultFilename: 'DroidValidationHandler.planets.xml',
-    name: 'DROID metagegevens exporteren naar XML',
+    description: 'DROID metagegevens exporteren naar XML',
   },
   {
     id: 'greenlist',
     dependsOn: ['exporting'],
     resultFilename: 'GreenListHandler.json',
-    name: 'Controleren of alle bestandstypen aan greenlist voldoen',
+    description: 'Controleren of alle bestandstypen aan greenlist voldoen',
   },
   {
     id: 'encoding',
     dependsOn: ['unpack'],
     resultFilename: 'EncodingHandler.json',
-    name: 'Encoding metadatabestanden controleren',
+    description: 'Encoding metadatabestanden controleren',
   },
   {
     id: 'validate',
     dependsOn: ['unpack'],
     resultFilename: 'MetadataValidationHandler.json',
-    name: 'Metadata valideren met XML-schema (XSD) en Schematron',
+    description: 'Metadata valideren met XML-schema (XSD) en Schematron',
   },
   {
     id: 'transform',
     // If ever running tasks in parallel, then greenlist needs to be run first, if selected
     dependsOn: ['unpack'],
     resultFilename: 'TransformationHandler.json',
-    name: 'Metadatabestanden omzetten naar XIP bestandsformaat',
+    description: 'Metadatabestanden omzetten naar XIP bestandsformaat',
     info:
       'Dit verandert de mapinhoud, dus heeft effect op de controle van de greenlist als die pas later wordt uitgevoerd',
   },
@@ -140,7 +143,7 @@ export const actions: Action[] = [
     id: 'sip',
     dependsOn: ['transform'],
     resultFilename: 'TODO',
-    name: 'Bestanden omzetten naar SIP bestandsformaat',
+    description: 'Bestanden omzetten naar SIP bestandsformaat',
   },
 ];
 
