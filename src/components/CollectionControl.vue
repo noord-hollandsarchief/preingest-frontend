@@ -260,7 +260,7 @@ export default defineComponent({
       // This may also exist when the checksum was calculated but the archive was not unpacked
       // TODO API make this work like any other action
       const checksumStep = steps.value.find((s) => s.id === 'calculate');
-      if (checksumStep) {
+      if (c.tarResultData && checksumStep) {
         checksumStep.result = c.tarResultData.find(
           (r) => r.actionName === 'ContainerChecksumHandler'
         );
