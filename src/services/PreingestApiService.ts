@@ -68,12 +68,11 @@ export const actions: Action[] = [
   },
   {
     id: 'unpack',
-    dependsOn: [],
+    // TODO remove dependency when checksum not needed to get the folder session
+    dependsOn: ['calculate'],
     name: 'Unpack',
     resultFilename: 'UnpackTarHandler.json',
     description: 'Archief uitpakken',
-    info:
-      'Omdat de resultaten worden opgeslagen in het uitgepakte archief, kan een archiefbestand na uitpakken niet opnieuw worden uitgepakt',
   },
   {
     id: 'virusscan',
@@ -81,6 +80,8 @@ export const actions: Action[] = [
     name: 'Virusscan',
     resultFilename: 'ScanVirusValidationHandler.json',
     description: 'Viruscontrole',
+    // As set in `allowRestart: true` in the CollectionControl component
+    info: 'In de demo kan de viruscontrole meerdere keren gestart worden',
   },
   {
     id: 'naming',

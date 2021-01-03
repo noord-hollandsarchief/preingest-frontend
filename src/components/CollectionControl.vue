@@ -117,7 +117,7 @@
 
       <Column
         field="lastDuration"
-        header="Doorlooptijd"
+        header="Duur"
         headerClass="p-text-center"
         bodyClass="p-text-center"
       ></Column>
@@ -215,11 +215,14 @@ export default defineComponent({
     };
 
     const calculateChecksum = async (step: Step): Promise<ActionStatus> => {
-      // TODO enforce
-      if (!collection.value || !collection.value.checksumType) {
+      // TODO enforce user choice rather than using default
+      if (!collection.value) {
         throw Error('TODO: enforce checksum type selection');
       }
-      const result = await api.getChecksum(collection.value.name, collection.value.checksumType);
+      const result = await api.getChecksum(
+        collection.value.name,
+        collection.value?.checksumType || 'SHA1'
+      );
       collection.value.calculatedChecksum = result.message;
       return 'success';
     };
@@ -268,6 +271,8 @@ export default defineComponent({
         // E.g. `"message": "SHA1 : cc8d8a7d1de976bc94f7baba4c24409817f296c1"`
         collection.value.calculatedChecksum = checksumStep.result?.message;
       }
+
+      // TODO we rely on the checksum to get the session id
 
       const sessionId = c.unpackSessionId;
       if (sessionId) {
