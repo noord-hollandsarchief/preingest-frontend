@@ -59,7 +59,7 @@
           label="Start"
           icon="pi pi-play"
           class="p-button-success p-mr-2"
-          @click="runSelected"
+          @click="runWaitingActions"
         />
       </template>
 
@@ -155,6 +155,7 @@ import { defineComponent, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
+import { useActionsRunner } from '@/composables/useActionsRunner';
 import {
   Collection,
   checksumTypes,
@@ -175,11 +176,6 @@ type Step = Action & {
   fixedSelected?: boolean;
   allowRestart?: boolean;
   downloadUrl?: string;
-  /**
-   * A custom function to trigger an action; if not set then {@link triggerActionAndWaitForCompleted}
-   * is used.
-   */
-  triggerFn?: (step: Step) => Promise<ActionStatus>;
 };
 
 interface SelectionEvent {
@@ -214,7 +210,7 @@ export default defineComponent({
       });
     };
 
-    const calculateChecksum = async (step: Step): Promise<ActionStatus> => {
+    const calculateChecksum = async (action: Action): Promise<ActionStatus> => {
       // TODO enforce user choice rather than using default
       if (!collection.value) {
         throw Error('TODO: enforce checksum type selection');
@@ -227,12 +223,26 @@ export default defineComponent({
       return 'success';
     };
 
-    const unpack = async (step: Step): Promise<ActionStatus> => {
+    // TODO Remove when API uses single session for each file name
+    const unpack = async (action: Action): Promise<ActionStatus> => {
       if (!collection.value) {
         throw Error('Programming error: unpacking needs a file name');
       }
-      // The sessionId is the filename here
-      return api.triggerActionAndWaitForCompleted(encodeURIComponent(collection.value.name), step);
+
+      // For the demo, unlike the other actions, the sessionId is the filename here
+      const unpackStatus = await api.triggerActionAndWaitForCompleted(
+        encodeURIComponent(collection.value.name),
+        action
+      );
+
+      // For the demo unpacking depends on calculation of the checksum, so we can now call
+      // getCollection which also fetches the checksum result which gives us the folder session id
+      // (which is also given in the triggerResult for unpack, but that's not returned by the
+      // service here).
+      const updatedCollection = await api.getCollection(collection.value.name);
+      collection.value.unpackSessionId = updatedCollection.unpackSessionId;
+
+      return unpackStatus;
     };
 
     const hiddenActions = ['reporting/droid'];
@@ -252,6 +262,9 @@ export default defineComponent({
     // does not also force-select/unselect any dependencies or dependents
     steps.value.forEach((step) => (step.selected = step.fixedSelected ?? step.selected));
     selectedSteps.value = steps.value.filter((step) => step.selected);
+
+    // TODO lock GUI
+    const { runWaitingActions } = useActionsRunner(collection, steps);
 
     // For the demo: try to load the archive's state, to see if it's already unpacked
     api.getCollection(props.filename).then(async (c) => {
@@ -298,6 +311,7 @@ export default defineComponent({
       steps,
       selectedSteps,
       collection,
+      runWaitingActions,
     };
   },
   computed: {
@@ -364,33 +378,6 @@ export default defineComponent({
         'selection-disabled': step.fixedSelected !== undefined,
         'expander-disabled': !step.hasResultFile && !step.result && !step.downloadUrl,
       };
-    },
-    async runSelected() {
-      if (!this.collection) {
-        return;
-      }
-      // TODO freeze GUI
-      // Simply run in the given order, one by one
-      for (const step of this.steps) {
-        if (step.selected) {
-          step.status = 'running';
-          try {
-            step.status = await (step.triggerFn
-              ? step.triggerFn(step)
-              : this.api.triggerActionAndWaitForCompleted(this.collection.unpackSessionId, step));
-            step.lastFetchedStatus = step.status;
-          } catch (e) {
-            this.toast.add({
-              severity: 'error',
-              summary: 'Mislukt',
-              detail: e,
-            });
-            step.status = 'failed';
-            // TODO Stop processing further results?
-          }
-          // TODO unselect? If we do, we can no longer tell what we did?
-        }
-      }
     },
     save() {
       // TODO Save file properties

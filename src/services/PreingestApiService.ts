@@ -49,6 +49,11 @@ export type Action = DependentItem & {
   status?: ActionStatus;
   lastFetchedStatus?: ActionStatus;
   hasResultFile?: boolean;
+  /**
+   * A custom function to trigger an action; if not set then {@link triggerActionAndWaitForCompleted}
+   * is used.
+   */
+  triggerFn?: (action: Action) => Promise<ActionStatus>;
 };
 
 /**
