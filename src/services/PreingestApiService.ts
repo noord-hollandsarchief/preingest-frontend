@@ -21,7 +21,6 @@ export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
 export type JsonMap = { [key: string]: AnyJson };
 export type JsonArray = AnyJson[];
 
-// export type ActionState = 'none' | 'running' | 'success' | 'error';
 export type ChecksumType = 'MD5' | 'SHA1' | 'SHA256' | 'SHA512';
 
 // TODO move elsewhere when trashing NewSessionDialog
@@ -377,7 +376,7 @@ export class PreingestApiService {
   ): Promise<ActionStatus | undefined> => {
     if (['greenlist', 'validate'].some((name) => name === action.id)) {
       if (action.resultFilename.endsWith('.json')) {
-        // We could store it in the action, but not for this demo workaround
+        // While we fetch this, we could also store it in the action, but not for this demo workaround
         const result = await this.getActionResult(sessionId, action.resultFilename);
         switch (action.id) {
           case 'greenlist':
@@ -507,10 +506,10 @@ export class PreingestApiService {
 
         // TODO make API return success/error
         // We may have gotten Started, Failed, Completed
-        return (await this.getFakeActionStatus(sessionId, action)) ||
-          results.some((result) => result.name === 'Failed')
-          ? 'error'
-          : 'success';
+        return (
+          (await this.getFakeActionStatus(sessionId, action)) ||
+          (results.some((result) => result.name === 'Failed') ? 'error' : 'success')
+        );
       }
       // Repeat
       return undefined;

@@ -20,7 +20,6 @@ export function useActionsRunner(collection: Ref<Collection | undefined>, action
       if (action.status === 'wait') {
         action.status = 'running';
         try {
-          console.log('Running action for session', collection.value.unpackSessionId);
           action.status = await (action.triggerFn
             ? action.triggerFn(action)
             : api.triggerActionAndWaitForCompleted(collection.value.unpackSessionId, action));
