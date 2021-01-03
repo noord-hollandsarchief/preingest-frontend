@@ -73,8 +73,7 @@ export const actions: Action[] = [
   },
   {
     id: 'unpack',
-    // TODO remove dependency when checksum not needed to get the folder session
-    dependsOn: ['calculate'],
+    dependsOn: [],
     name: 'Unpack',
     resultFilename: 'UnpackTarHandler.json',
     description: 'Archief uitpakken',
