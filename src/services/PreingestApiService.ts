@@ -62,6 +62,7 @@ export const actions: Action[] = [
     dependsOn: [],
     // TODO validate name as soon as API supports this
     name: 'TODO calculate',
+    // TODO not correct; this is currently ../filename.json
     resultFilename: 'ContainerChecksumHandler.json',
     method: 'GET',
     description: 'Checksum berekenen',
@@ -291,7 +292,17 @@ export class PreingestApiService {
       throw new Error('No such file ' + filename);
     }
 
-    // Some may fail with 500 Internal Server Error, so catch any error
+    // The above collection.tarResultData may include a ContainerChecksumHandler which includes a
+    // sessionId, but that sessionId is not related to any folder of the unpacked archive! So, the
+    // following will not do:
+    //
+    //   const sessionId =
+    //     collection.tarResultData.find((data) => data.actionName === 'ContainerChecksumHandler')
+    //       ?.sessionId;
+    //
+    // Instead, we really need to iterate the sessions and get the UnpackTarHandler.json for each of
+    // them. Some may fail with 500 Internal Server Error, so swallow any error.
+
     const unpackResults = await Promise.all(
       sessions.map((id) => this.getActionResult(id, 'UnpackTarHandler.json').catch((e) => e))
     );
@@ -354,15 +365,26 @@ export class PreingestApiService {
     });
   };
 
-  /**
-   * Get (the first) CreationTimestamp from the result(s), if defined.
-   */
-  getTime = (result: ActionResult | ActionResult[]): dayjs.Dayjs | undefined => {
-    return Array.isArray(result)
-      ? dayjs(result[0].CreationTimestamp)
-      : result
-      ? dayjs(result.CreationTimestamp)
-      : undefined;
+  // TODO remove when API returns status
+  private getFakeActionStatus = async (
+    sessionId: string,
+    action: Action
+  ): Promise<ActionStatus | undefined> => {
+    if (['greenlist', 'validate'].some((name) => name === action.id)) {
+      if (action.resultFilename.endsWith('.json')) {
+        // We could store it in the action, but not for this demo workaround
+        const result = await this.getActionResult(sessionId, action.resultFilename);
+        switch (action.id) {
+          case 'greenlist':
+            return Array.isArray(result) &&
+              result.some((r) => (r as GreenListActionResult).InGreenList === false)
+              ? 'error'
+              : 'success';
+          case 'validate':
+            return Array.isArray(result) && result.length > 0 ? 'error' : 'success';
+        }
+      }
+    }
   };
 
   updateActionResults = async (
@@ -377,7 +399,7 @@ export class PreingestApiService {
       checkResultFiles ? this.getResultFilenames(sessionId) : Promise.resolve([]),
     ])) as [CompleteStatusResult[], string[]];
 
-    actions.forEach((action) => {
+    for (const action of actions) {
       // The full status results include all start, complete and error events for all invocation of
       // each action. So: filter to get the last, if any.
       const actionResults = results.filter((result) => result.session.name === action.name);
@@ -401,7 +423,9 @@ export class PreingestApiService {
             action.status.creation >= lastStart.status.creation
           );
         });
-        action.lastFetchedStatus = lastFailed ? 'failed' : lastCompleted ? 'success' : 'running';
+        action.lastFetchedStatus =
+          (await this.getFakeActionStatus(sessionId, action)) ||
+          (lastFailed ? 'failed' : lastCompleted ? 'success' : 'running');
         action.status = action.status === 'wait' ? action.status : action.lastFetchedStatus;
 
         // TODO API remove timezone workaround
@@ -420,7 +444,7 @@ export class PreingestApiService {
         action.hasResultFile = resultFiles.some((name) => name === action.resultFilename);
         // TODO copy the message as well? Especially for (fatal) errors?
       }
-    });
+    }
   };
 
   /**
@@ -429,26 +453,25 @@ export class PreingestApiService {
    * TODO For the demo, to unpack an archive sessionId must be set to the filename
    */
   triggerActionAndWaitForCompleted = async (
-    sessionId: string,
+    folderOrSessionId: string,
     action: Action
   ): Promise<ActionStatus> => {
     // TODO API this assume no old results exist; for some handlers we could get a timestamp
     // but not for, e.g., the greenlist
     // TODO remove after demo?
 
-    // For the UnpackTarHandler, for which we do not know the sessionId yet and hence use the
-    // filename in the URL, this would fail with a 400 Bad Request as the API expects a GUID. For
-    // many or all other handlers the API will fail with a 500 error if the file does not exist.
-    // So, swallow any exception and default to the current time.
-    // const oldResult = await this.getActionResult(sessionId, action.resultFilename).catch((e) => e);
-    // const oldTimestamp = this.getTime(oldResult) || dayjs();
-
     const triggerResult = await this.fetchWithDefaults<TriggerActionResult>(
-      `preingest/${action.id}/${sessionId}`,
+      `preingest/${action.id}/${folderOrSessionId}`,
       {
         method: action.method || 'POST',
       }
     );
+
+    // For most actions, `triggerResult.sessionId` is just the same as `folderOrSessionId`. But for
+    // UnpackTarHandler we didn't have the session yet when triggering the action, so use the
+    // one we got above.
+    // TODO preserve sessionId for unpack
+    const sessionId = triggerResult.sessionId;
 
     // TODO API is an action always accepted?
 
@@ -465,12 +488,24 @@ export class PreingestApiService {
       const results: StatusResult[] = await this.fetchWithDefaults(
         `status/result/${triggerResult.actionId}`
       );
-      if (results[results.length - 1].name === 'Completed') {
+      const lastResult = results[results.length - 1];
+      if (lastResult.name === 'Completed') {
+        // TODO remove timezone workaround
+        action.lastEndDateTime = lastResult.creation + 'Z';
+        action.lastDuration = formatDateDifference(
+          action.lastStartDateTime || '',
+          action.lastEndDateTime
+        );
+
         // TODO merge with other code that determines this
         action.hasResultFile = true;
+
         // TODO make API return success/error
         // We may have gotten Started, Failed, Completed
-        return results.some((result) => result.name === 'Failed') ? 'error' : 'success';
+        return (await this.getFakeActionStatus(sessionId, action)) ||
+          results.some((result) => result.name === 'Failed')
+          ? 'error'
+          : 'success';
       }
       // Repeat
       return undefined;

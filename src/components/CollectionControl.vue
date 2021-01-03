@@ -272,7 +272,7 @@ export default defineComponent({
         collection.value.calculatedChecksum = checksumStep.result?.message;
       }
 
-      // TODO we rely on the checksum to get the session id
+      // TODO we rely on the unpack session to get the session id
 
       const sessionId = c.unpackSessionId;
       if (sessionId) {
@@ -283,31 +283,6 @@ export default defineComponent({
             (step.fixedSelected =
               !step.allowRestart && step.status === 'success' ? false : undefined)
         );
-
-        // TODO copy old workarounds into service
-        // const resultFiles = await api.getResultFilenames(sessionId);
-        // resultFiles.forEach((name) => {
-        //   const step = steps.value.find((s) => s.resultFilename === name);
-        //   if (step) {
-        //     step.status = 'success';
-        //     if (name.endsWith('.json')) {
-        //       api.getActionResult(sessionId, name).then((json) => {
-        //         step.result = json;
-        //         // TODO Get generic API results or move into definition of steps
-        //         switch (step.id) {
-        //           case 'MetadataValidation':
-        //             step.status =
-        //               Array.isArray(step.result) && step.result.length > 0 ? 'error' : 'success';
-        //             break;
-        //           case 'GreenList':
-        //             step.status =
-        //               Array.isArray(step.result) &&
-        //               step.result.some((r) => (r as GreenListActionResult).InGreenList === false)
-        //                 ? 'error'
-        //                 : 'success';
-        //             break;
-        //         }
-        //       });
       }
     });
 
