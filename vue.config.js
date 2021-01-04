@@ -11,6 +11,8 @@ module.exports = {
   // should be hosted on the same protocol, domain and port.
   configureWebpack: {
     devServer: {
+      // This will use port 9001 and up if already in use
+      port: 9000,
       proxy: {
         '^/api': {
           // The matched `/api` part is also copied into the target URL; to change that, see

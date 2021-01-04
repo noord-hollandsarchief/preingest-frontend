@@ -44,8 +44,9 @@ The configuration is kept in [.env](./.env) files.
 
 - Compile and hot-reload for development: `yarn serve`
 
-  This [uses a proxy](./vue.config.js) for the API, to avoid CORS limitations. The default
-  configuration expects the API to be running on <http://localhost:8000/api/>.
+  This runs on <http://localhost:9000> (or 9001 and up if ports are already in use) and
+  [uses a proxy](./vue.config.js) for the API, to avoid CORS limitations. The default configuration
+  expects the API to be running on <http://localhost:8000/api/>.
 
 - Compile and minify for production: `yarn build`
 
