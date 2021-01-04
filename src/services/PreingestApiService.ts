@@ -182,6 +182,15 @@ export const actions: Action[] = [
     resultFilename: 'TODO',
     description: 'Bestanden omzetten naar SIP bestandsformaat',
   },
+  {
+    id: 'excel',
+    dependsOn: [],
+    // TODO validate name when API supports this
+    name: 'TODO Excel',
+    resultFilename: 'TODO',
+    description: 'Excel rapportage',
+    info: 'Nog niet beschikbaar',
+  },
 ];
 
 export type Collection = {

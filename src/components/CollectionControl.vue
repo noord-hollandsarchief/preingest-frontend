@@ -71,12 +71,6 @@
           class="p-button-help p-mx-2"
           @click="runIngest"
         />
-        <Button
-          label="Excel rapport"
-          icon="pi pi-download"
-          class="p-button-help"
-          @click="downloadExcel"
-        />
       </template>
     </Toolbar>
 
@@ -251,6 +245,7 @@ export default defineComponent({
       { id: 'calculate', allowRestart: true, triggerFn: calculateChecksum },
       { id: 'unpack', triggerFn: unpack },
       { id: 'virusscan', allowRestart: true },
+      { id: 'excel', allowRestart: true },
     ];
     const steps = ref<Step[]>(
       actions
