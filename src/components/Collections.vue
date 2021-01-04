@@ -47,6 +47,7 @@
       </Column>
 
       <Column
+        field="status"
         header="Status"
         :sortable="true"
         headerClass="p-text-center"
