@@ -82,6 +82,15 @@ docker run -it -p 9000:80 --rm \
   noordhollandsarchief/preingest-frontend:development
 ```
 
+[For Linux](https://stackoverflow.com/a/43541732) set `--add-host=host.docker.internal:host-gateway`
+or use `172.17.0.1` instead of `host.docker.internal`:
+
+```text
+docker run -it -p 9000:80 --rm \
+  --env PROXY_API_DEST=http://172.17.0.1:8000/api/ \
+  noordhollandsarchief/preingest-frontend:development
+```
+
 ### Linting and Prettier
 
 A pre-commit hook ensures that linting errors and formatting errors cannot be committed. Note that
