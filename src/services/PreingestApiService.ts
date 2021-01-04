@@ -34,26 +34,31 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
 // 'wait' is currently only known in the frontend, which controls the queue
 export type ActionStatus = 'wait' | 'running' | 'success' | 'error' | 'failed';
 
-export type Action = DependentItem & {
+export type ActionSummary = {
+  // Like `Virusscan` and `Droid - PDF report`
   name: string;
-  description: string;
-  info?: string;
-  resultFilename: string;
-  // The HTTP method, default POST
-  method?: string;
-  result?: ActionResult | ActionResult[];
   lastStartDateTime?: string;
   lastEndDateTime?: string;
   lastDuration?: string;
-  status?: ActionStatus;
   lastFetchedStatus?: ActionStatus;
   hasResultFile?: boolean;
-  /**
-   * A custom function to trigger an action; if not set then {@link triggerActionAndWaitForCompleted}
-   * is used.
-   */
-  triggerFn?: (action: Action) => Promise<ActionStatus>;
 };
+
+export type Action = DependentItem &
+  ActionSummary & {
+    description: string;
+    info?: string;
+    resultFilename: string;
+    // The HTTP method, default POST
+    method?: string;
+    result?: ActionResult | ActionResult[];
+    status?: ActionStatus;
+    /**
+     * A custom function to trigger an action; if not set then {@link triggerActionAndWaitForCompleted}
+     * is used.
+     */
+    triggerFn?: (action: Action) => Promise<ActionStatus>;
+  };
 
 /**
  * The actions supported by this API. The `id` must match the URL path, like `virusscan` in
@@ -371,8 +376,11 @@ export class PreingestApiService {
   // TODO remove when API returns status
   private getFakeActionStatus = async (
     sessionId: string,
-    action: Action
+    action?: Action
   ): Promise<ActionStatus | undefined> => {
+    if (!action) {
+      return;
+    }
     if (['greenlist', 'validate'].some((name) => name === action.id)) {
       if (action.resultFilename.endsWith('.json')) {
         // While we fetch this, we could also store it in the action, but not for this demo workaround
@@ -390,24 +398,22 @@ export class PreingestApiService {
     }
   };
 
-  updateActionResults = async (
-    sessionId: string,
-    actions: Action[],
-    checkResultFiles = false
-  ): Promise<void> => {
-    // actions.forEach((a) => (a.status = undefined));
+  // TODO API remove timezone workaround
+  fixTimezone = (s?: string) => {
+    return s ? s + 'Z' : undefined;
+  };
 
-    const [results, resultFiles] = (await Promise.all([
-      this.fetchWithDefaults(`status/complete/${sessionId}`),
-      checkResultFiles ? this.getResultFilenames(sessionId) : Promise.resolve([]),
-    ])) as [CompleteStatusResult[], string[]];
+  getActionSummaries = async (sessionId: string): Promise<ActionSummary[]> => {
+    // TODO API is this sorted?
+    const results: CompleteStatusResult[] = await this.fetchWithDefaults(
+      `status/complete/${sessionId}`
+    );
 
-    for (const action of actions) {
-      // The full status results include all start, complete and error events for all invocation of
-      // each action. So: filter to get the last, if any.
-      const actionResults = results.filter((result) => result.session.name === action.name);
-      // TODO API is this sorted?
-      if (actionResults.length > 0) {
+    const names = [...new Set(results.map((result) => result.session.name))];
+    return Promise.all(
+      names.map(async (name) => {
+        const actionResults = results.filter((result) => result.session.name === name);
+
         // If an action fails badly, then the API will return Started, Failed and Completed. If an
         // action completes normally, then ... TODO API what to expect?
         const lastStart = actionResults.reduce((acc, result) => {
@@ -415,38 +421,63 @@ export class PreingestApiService {
             ? result
             : acc;
         });
+
         const lastFailed = actionResults.find((action) => {
           return (
             action.status.name === 'Failed' && action.status.creation >= lastStart.status.creation
           );
         });
+
         const lastCompleted = actionResults.find((action) => {
           return (
             action.status.name === 'Completed' &&
             action.status.creation >= lastStart.status.creation
           );
         });
-        action.lastFetchedStatus =
+
+        const action = actions.find((action) => action.name === name);
+        const lastFetchedStatus =
           (await this.getFakeActionStatus(sessionId, action)) ||
           (lastFailed ? 'failed' : lastCompleted ? 'success' : 'running');
-        action.status = action.status === 'wait' ? action.status : action.lastFetchedStatus;
 
-        // TODO API remove timezone workaround
-        action.lastStartDateTime = lastStart.status.creation + 'Z';
-        action.lastEndDateTime = lastFailed?.status?.creation || lastCompleted?.status?.creation;
-        if (action.lastEndDateTime) {
-          // TODO API remove workaround
-          action.lastEndDateTime += 'Z';
-        }
-        // Will yield the time up to now if not Completed/Failed yet
-        action.lastDuration = formatDateDifference(
-          action.lastStartDateTime,
-          action.lastEndDateTime
+        // action.status = action.status === 'wait' ? action.status : action.lastFetchedStatus;
+        const lastStartDateTime = this.fixTimezone(lastStart.status.creation) || '';
+        const lastEndDateTime = this.fixTimezone(
+          lastFailed?.status?.creation || lastCompleted?.status?.creation
         );
 
-        action.hasResultFile = resultFiles.some((name) => name === action.resultFilename);
-        // TODO copy the message as well? Especially for (fatal) errors?
+        return {
+          name,
+          lastStartDateTime,
+          lastEndDateTime,
+          // Will yield the time up to now if not Completed/Failed yet
+          lastDuration: formatDateDifference(lastStartDateTime, lastEndDateTime),
+          lastFetchedStatus,
+          // TODO copy the message as well? Especially for (fatal) errors?
+        };
+      })
+    );
+  };
+
+  updateActionResults = async (
+    sessionId: string,
+    actions: Action[],
+    checkResultFiles = false
+  ): Promise<void> => {
+    // actions.forEach((a) => (a.status = undefined));
+
+    const [summaries, resultFiles] = (await Promise.all([
+      this.getActionSummaries(sessionId),
+      checkResultFiles ? this.getResultFilenames(sessionId) : Promise.resolve([]),
+    ])) as [ActionSummary[], string[]];
+
+    for (const action of actions) {
+      const actionResult = summaries.find((result) => result.name === action.name);
+      if (actionResult) {
+        Object.assign(action, actionResult);
       }
+      action.status = action.status === 'wait' ? action.status : action.lastFetchedStatus;
+      action.hasResultFile = resultFiles.some((name) => name === action.resultFilename);
     }
   };
 
@@ -504,6 +535,7 @@ export class PreingestApiService {
         action.hasResultFile = true;
 
         // TODO make API return success/error
+        // TODO this workaround may return `error` for disabled virusscan here, but `failed` after refresh
         // We may have gotten Started, Failed, Completed
         return (
           (await this.getFakeActionStatus(sessionId, action)) ||

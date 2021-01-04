@@ -29,16 +29,16 @@
       </Column>
 
       <!-- TODO What defines "last access"? This may not be the last action date at all? -->
-      <Column
-        field="lastAccessTime"
-        header="Verwerkingsdatum"
-        :sortable="true"
-        :excludeGlobalFilter="true"
-      >
-        <template #body="slotProps">
-          {{ formatDateString(slotProps.data.lastAccessTime) }}
-        </template>
-      </Column>
+      <!--      <Column-->
+      <!--        field="lastAccessTime"-->
+      <!--        header="Verwerkingsdatum"-->
+      <!--        :sortable="true"-->
+      <!--        :excludeGlobalFilter="true"-->
+      <!--      >-->
+      <!--        <template #body="slotProps">-->
+      <!--          {{ formatDateString(slotProps.data.lastAccessTime) }}-->
+      <!--        </template>-->
+      <!--      </Column>-->
 
       <Column field="size" header="Grootte" :sortable="true" :excludeGlobalFilter="true">
         <template #body="slotProps">
@@ -53,8 +53,38 @@
         bodyClass="p-text-center"
       >
         <template #body="slotProps">
-          <Tag v-if="!slotProps.data.tarResultData" severity="info">nieuw</Tag>
-          <Tag v-else severity="warning">onbekend </Tag>
+          <Tag v-if="slotProps.data.status === 'new'" severity="info">nieuw</Tag>
+          <Tag v-else-if="slotProps.data.status === 'running'" severity="warning">bezig</Tag>
+          <Tag
+            v-else-if="slotProps.data.status === 'success'"
+            severity="success"
+            v-tooltip="'Alle geselecteerde acties zijn zonder fouten uitgevoerd'"
+            >gereed</Tag
+          >
+          <Tag
+            v-else-if="slotProps.data.status === 'error'"
+            severity="danger"
+            v-tooltip="'Alle geselecteerde acties zijn uitgevoerd, maar er zijn fouten gevonden'"
+            >fout</Tag
+          >
+          <Tag
+            v-else-if="slotProps.data.status === 'failed'"
+            severity="danger"
+            v-tooltip="'Een of meer acties konden niet worden uitgevoerd'"
+            >mislukt</Tag
+          >
+        </template>
+      </Column>
+
+      <Column
+        header="Acties"
+        :sortable="false"
+        :excludeGlobalFilter="true"
+        headerClass="p-text-center"
+        bodyClass="p-text-center"
+      >
+        <template #body="slotProps">
+          {{ slotProps.data.summaries?.length }}
         </template>
       </Column>
 
@@ -63,7 +93,7 @@
           <router-link :to="`/file/${slotProps.data.name}`" style="text-decoration: none">
             <!-- We may also have this result when the checksum was calculated but the archive was not unpacked -->
             <Button
-              v-if="slotProps.data.tarResultData"
+              v-if="slotProps.data.status !== 'new'"
               icon="pi pi-search"
               class="p-button-sm p-button-rounded"
               v-tooltip="'Bekijk de resultaten'"
@@ -78,7 +108,7 @@
 
           <Button
             icon="pi pi-trash"
-            class="p-button-sm p-button-rounded p-button-danger p-ml-2"
+            class="p-button-sm p-button-rounded p-button-warning p-ml-2"
             @click="deleteFile($event, slotProps.data.name)"
             v-tooltip="'Verwijder het bestand en de resultaten'"
           />
@@ -93,16 +123,45 @@ import { defineComponent, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
+import { ActionSummary, Collection } from '@/services/PreingestApiService';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
+
+type CollectionWithStatus = Collection & {
+  summaries?: ActionSummary[];
+  // TODO This would also need some "done" state for "ingested"
+  status?: 'new' | 'running' | 'success' | 'error' | 'failed';
+};
 
 export default defineComponent({
   async setup() {
+    const api = useApi();
     const confirm = useConfirm();
     const toast = useToast();
     const filters = ref({});
     const multiSortMeta = ref([{ field: 'creationTime', order: 1 }]);
+    const collections = ref<CollectionWithStatus[]>(await api.getCollections());
 
-    const collections = await useApi().getCollections();
+    // TODO Can we change the API to avoid this?
+    collections.value.forEach((collection) => {
+      api.getCollection(collection.name).then((details) => {
+        if (details.unpackSessionId) {
+          api.getActionSummaries(details.unpackSessionId).then((summaries) => {
+            collection.summaries = summaries;
+            if (summaries.some((summary) => summary.lastFetchedStatus === 'failed')) {
+              collection.status = 'failed';
+            } else if (summaries.some((summary) => summary.lastFetchedStatus === 'error')) {
+              collection.status = 'error';
+            } else if (summaries.some((summary) => summary.lastFetchedStatus === 'running')) {
+              collection.status = 'running';
+            } else if (summaries.some((summary) => summary.lastFetchedStatus === 'success')) {
+              collection.status = 'success';
+            }
+          });
+        } else {
+          collection.status = 'new';
+        }
+      });
+    });
 
     return {
       formatDateString,

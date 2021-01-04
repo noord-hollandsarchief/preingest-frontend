@@ -137,7 +137,7 @@
             v-else-if="slotProps.data.status === 'failed'"
             severity="danger"
             v-tooltip="'De actie kon niet worden uitgevoerd'"
-            >onbekend</Tag
+            >mislukt</Tag
           >
         </template>
       </Column>
