@@ -94,7 +94,7 @@
             <!-- We may also have this result when the checksum was calculated but the archive was not unpacked -->
             <Button
               v-if="slotProps.data.status !== 'new'"
-              icon="pi pi-search"
+              icon="pi pi-eye"
               class="p-button-sm p-button-rounded"
               v-tooltip="'Bekijk de resultaten'"
             />
