@@ -3,6 +3,14 @@ import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
 import { Action, Collection } from '@/services/PreingestApiService';
 
+/**
+ * Callback as invoked after each action, allowing the caller to do some housekeeping or even abort
+ * further processing.
+ *
+ * @return `false` to abort, `true` to continue with the next waiting action
+ */
+type ActionCompleteFn = (action: Action) => boolean;
+
 export function useActionsRunner(collection: Ref<Collection | undefined>, actions: Ref<Action[]>) {
   const api = useApi();
   const toast = useToast();
@@ -10,7 +18,7 @@ export function useActionsRunner(collection: Ref<Collection | undefined>, action
   /**
    * Run the actions that have status `wait` due to some user selection.
    */
-  const runWaitingActions = async () => {
+  const runWaitingActions = async (onActionComplete?: ActionCompleteFn) => {
     if (!collection.value) {
       return;
     }
@@ -31,9 +39,17 @@ export function useActionsRunner(collection: Ref<Collection | undefined>, action
             detail: e,
           });
           action.status = 'failed';
-          // TODO Stop processing further results?
         }
-        // TODO unselect? If we do, we can no longer tell what we did?
+        if (onActionComplete) {
+          if (!onActionComplete(action)) {
+            toast.add({
+              severity: 'error',
+              summary: 'Fout in vereiste stap',
+              detail: 'Verdere verwerking is afgebroken.',
+            });
+            return;
+          }
+        }
       }
     }
   };

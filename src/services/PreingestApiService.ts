@@ -390,7 +390,7 @@ export class PreingestApiService {
     if (!action) {
       return;
     }
-    if (['greenlist', 'validate'].some((name) => name === action.id)) {
+    if (['greenlist', 'validate'].includes(action.id)) {
       if (action.resultFilename.endsWith('.json')) {
         // While we fetch this, we could also store it in the action, but not for this demo workaround
         const result = await this.getActionResult(sessionId, action.resultFilename);
@@ -548,7 +548,7 @@ export class PreingestApiService {
         // We may have gotten Started, Failed, Completed
         return (
           (await this.getFakeActionStatus(sessionId, action)) ||
-          (results.some((result) => result.name === 'Failed') ? 'error' : 'success')
+          (results.some((result) => result.name === 'Failed') ? 'failed' : 'success')
         );
       }
       // Repeat

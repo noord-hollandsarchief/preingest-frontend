@@ -59,7 +59,7 @@
           label="Start"
           icon="pi pi-play"
           class="p-button-success p-mr-2"
-          @click="runWaitingActions"
+          @click="runActions"
         />
       </template>
 
@@ -258,7 +258,6 @@ export default defineComponent({
     steps.value.forEach((step) => (step.selected = step.fixedSelected ?? step.selected));
     selectedSteps.value = steps.value.filter((step) => step.selected);
 
-    // TODO lock GUI
     const { runWaitingActions } = useActionsRunner(collection, steps);
 
     // For the demo: try to load the archive's state, to see if it's already unpacked
@@ -327,7 +326,12 @@ export default defineComponent({
 
       this.steps.forEach((step: Step) => {
         step.selected = step.fixedSelected ?? inSelected(step);
-        step.status = step.selected ? 'wait' : step.lastFetchedStatus;
+        // If `selectedSteps` is changed while running the selected steps, then this watcher may be
+        // invoked after a next step's state was already set to `running`. Make sure not to set it
+        // back to `waiting`.
+        if (step.status !== 'running') {
+          step.status = step.selected ? 'wait' : step.lastFetchedStatus;
+        }
       });
 
       // To avoid endless recursive updates, only change `selectedSteps` if needed
@@ -377,6 +381,21 @@ export default defineComponent({
     save() {
       // TODO Save file properties
       this.notImplemented();
+    },
+    runActions() {
+      // TODO lock UI
+      this.runWaitingActions((step: Step) => {
+        if (step.status !== 'failed') {
+          step.selected = false;
+          this.selectedSteps = this.selectedSteps.filter((s) => s.id !== step.id);
+          if (step.status === 'success') {
+            // Fix the state to not-selected (unless this step allows for restarting)
+            step.fixedSelected = step.allowRestart ? step.fixedSelected : false;
+          }
+        }
+        // Abort if something failed (but not in case an error was found)
+        return step.status !== 'failed';
+      });
     },
     runIngest() {
       // TODO Trigger ingest
