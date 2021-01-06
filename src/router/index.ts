@@ -9,7 +9,7 @@ const routes: Array<RouteRecordRaw> = [
     component: Home,
   },
   {
-    path: '/file/:filename',
+    path: '/s/:sessionId',
     name: 'Collection',
     component: Collection,
   },

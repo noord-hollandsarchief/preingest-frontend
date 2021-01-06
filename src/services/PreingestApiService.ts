@@ -69,9 +69,7 @@ export const actions: Action[] = [
   {
     id: 'calculate',
     dependsOn: [],
-    // TODO validate name as soon as API supports this
-    name: 'TODO calculate',
-    // TODO not correct; this is currently ../filename.json
+    name: 'Calculate',
     resultFilename: 'ContainerChecksumHandler.json',
     method: 'GET',
     description: 'Checksum berekenen',
@@ -194,13 +192,12 @@ export const actions: Action[] = [
 ];
 
 export type Collection = {
+  // The file name
   name: string;
+  sessionId: string;
   creationTime: string;
   size: number;
-  // TODO API Implicit session, or create session when requesting the list of collections
-  unpackSessionId: string;
-  tarResultData: ActionResult[];
-  // TODO Just for the demo here, as it needs to be fetched differently than the other results
+  // The following attributes are not (yet) fetched from the API, but populated in the frontend
   calculatedChecksum?: string;
   // TODO Add to API
   checksumType?: ChecksumType;
@@ -287,46 +284,21 @@ export class PreingestApiService {
   }
 
   /**
-   * TODO Replace with proper API call
-   *
-   * For the demo:
-   *
-   * - get all collections and filter on the one we want
-   * - get all guids
-   * - try to get the UnpackTarHandler that goes with one of those sessions, if any; this may also
-   *   exist when the checksum was calculated but the archive was not unpacked
+   * TODO Replace with proper API call without the need to get the full list
    */
-  getCollection = async (filename: string): Promise<Collection> => {
-    const [collections, sessions] = await Promise.all([this.getCollections(), this.getSessions()]);
-    const collection = collections.find((c) => c.name === filename);
+  getCollection = async (sessionId: string): Promise<Collection> => {
+    const collections = await this.getCollections();
+    const collection = collections.find((c) => c.sessionId === sessionId);
 
     if (!collection) {
       this.toast.add({
         severity: 'error',
         summary: `Bestand bestaat niet`,
-        detail: `Het bestand ${filename} bestaat niet`,
+        detail: `Het bestand voor sessie ${sessionId} bestaat niet`,
       });
-      throw new Error('No such file ' + filename);
+      throw new Error('No such session ' + sessionId);
     }
 
-    // The above collection.tarResultData may include a ContainerChecksumHandler which includes a
-    // sessionId, but that sessionId is not related to any folder of the unpacked archive! So, the
-    // following will not do:
-    //
-    //   const sessionId =
-    //     collection.tarResultData.find((data) => data.actionName === 'ContainerChecksumHandler')
-    //       ?.sessionId;
-    //
-    // Instead, we really need to iterate the sessions and get the UnpackTarHandler.json for each of
-    // them. Some may fail with 500 Internal Server Error, so swallow any error.
-
-    const unpackResults = await Promise.all(
-      sessions.map((id) => this.getActionResult(id, 'UnpackTarHandler.json').catch((e) => e))
-    );
-
-    const unpackResult = unpackResults.find((r) => r.CollectionItem === filename);
-
-    collection.unpackSessionId = unpackResult?.SessionId;
     return collection;
   };
 
@@ -334,11 +306,13 @@ export class PreingestApiService {
     return this.fetchWithDefaults('output/collections');
   };
 
+  // TODO API should we always return an array?
   // UnpackTarHandler.json, DroidValidationHandler.pdf and so on.
   getActionResult = async (
     sessionId: string,
     resultFileName: string
   ): Promise<ActionResult | ActionResult[]> => {
+    // TODO this may fail with 500 Internal Server Error if results don't exist
     return this.fetchWithDefaults(`output/json/${sessionId}/${resultFileName}`);
   };
 
@@ -355,31 +329,16 @@ export class PreingestApiService {
   };
 
   /**
-   * Send an API command to trigger calculating the checksum, and poll for its results.
+   * Get the existing checksum result, if any.
    */
-  // TODO typing 'MD5' | 'SHA1' | 'SHA256' | 'SHA512'
-  getChecksum = async (filename: string, checksumType: string): Promise<ActionResult> => {
-    // TODO Change API to validate parameters
-    // TODO Change API to rephrase "Geen resultaat." to some generic code
-    // TODO Change API to get results for single file
-    // After firing the request to calculate the checksum, it seems we need to get the list of all
-    // files to get the result of the file we need?
-
-    const path = `preingest/calculate/${checksumType}/${encodeURIComponent(filename)}`;
-    const action = await this.fetchWithDefaults<TriggerActionResult>(path);
-
-    return this.repeatUntilResult(async () => {
-      const collections = await this.getCollections();
-      const checksumSession = collections.filter(
-        (c) =>
-          c?.name === filename && c.tarResultData?.filter((r) => r.sessionId === action.sessionId)
-      )[0];
-      if (checksumSession) {
-        return checksumSession.tarResultData[0];
+  getLastCalculatedChecksum = async (sessionId: string): Promise<string | undefined> => {
+    const checksumStep = actions.find((a) => a.id === 'calculate');
+    if (checksumStep) {
+      const actionResult = await this.getActionResult(sessionId, checksumStep.resultFilename);
+      if (actionResult) {
+        return (actionResult as ActionResult[])[0].Message;
       }
-      // Repeat
-      return undefined;
-    });
+    }
   };
 
   // TODO remove when API returns status
@@ -492,29 +451,22 @@ export class PreingestApiService {
 
   /**
    * Send an API command to trigger an action, and poll for its (new) results.
-   *
-   * TODO For the demo, to unpack an archive sessionId must be set to the filename
    */
   triggerActionAndWaitForCompleted = async (
-    folderOrSessionId: string,
-    action: Action
+    sessionId: string,
+    action: Action,
+    actionSuffix = ''
   ): Promise<ActionStatus> => {
     // TODO API this assume no old results exist; for some handlers we could get a timestamp
     // but not for, e.g., the greenlist
     // TODO remove after demo?
 
     const triggerResult = await this.fetchWithDefaults<TriggerActionResult>(
-      `preingest/${action.id}/${folderOrSessionId}`,
+      `preingest/${action.id}${actionSuffix ? '/' + actionSuffix : ''}/${sessionId}`,
       {
         method: action.method || 'POST',
       }
     );
-
-    // For most actions, `triggerResult.sessionId` is just the same as `folderOrSessionId`. But for
-    // UnpackTarHandler we didn't have the session yet when triggering the action, so use the
-    // one we got above.
-    // TODO preserve sessionId for unpack
-    const sessionId = triggerResult.sessionId;
 
     // TODO API is an action always accepted?
 

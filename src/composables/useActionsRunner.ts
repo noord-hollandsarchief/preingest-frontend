@@ -30,7 +30,7 @@ export function useActionsRunner(collection: Ref<Collection | undefined>, action
         try {
           action.status = await (action.triggerFn
             ? action.triggerFn(action)
-            : api.triggerActionAndWaitForCompleted(collection.value.unpackSessionId, action));
+            : api.triggerActionAndWaitForCompleted(collection.value.sessionId, action));
           action.lastFetchedStatus = action.status;
         } catch (e) {
           toast.add({

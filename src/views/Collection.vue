@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <h1>Verwerking</h1>
-    <CollectionControl :filename="$route.params.filename" />
+    <CollectionControl :sessionId="$route.params.sessionId" />
   </div>
 </template>
 

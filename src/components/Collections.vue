@@ -91,8 +91,7 @@
 
       <Column headerStyle="width:8rem">
         <template #body="slotProps">
-          <router-link :to="`/file/${slotProps.data.name}`" style="text-decoration: none">
-            <!-- We may also have this result when the checksum was calculated but the archive was not unpacked -->
+          <router-link :to="`/s/${slotProps.data.sessionId}`" style="text-decoration: none">
             <Button
               v-if="slotProps.data.status !== 'new'"
               icon="pi pi-eye"
@@ -110,7 +109,7 @@
           <Button
             icon="pi pi-trash"
             class="p-button-sm p-button-rounded p-button-warning p-ml-2"
-            @click="deleteFile($event, slotProps.data.name)"
+            @click="deleteFile($event, slotProps.data)"
             v-tooltip="'Verwijder het bestand en de resultaten'"
           />
         </template>
@@ -144,20 +143,16 @@ export default defineComponent({
 
     // TODO Can we change the API to avoid this?
     collections.value.forEach((collection) => {
-      api.getCollection(collection.name).then((details) => {
-        if (details.unpackSessionId) {
-          api.getActionSummaries(details.unpackSessionId).then((summaries) => {
-            collection.summaries = summaries;
-            if (summaries.some((summary) => summary.lastFetchedStatus === 'failed')) {
-              collection.status = 'failed';
-            } else if (summaries.some((summary) => summary.lastFetchedStatus === 'error')) {
-              collection.status = 'error';
-            } else if (summaries.some((summary) => summary.lastFetchedStatus === 'running')) {
-              collection.status = 'running';
-            } else if (summaries.some((summary) => summary.lastFetchedStatus === 'success')) {
-              collection.status = 'success';
-            }
-          });
+      api.getActionSummaries(collection.sessionId).then((summaries) => {
+        collection.summaries = summaries;
+        if (summaries.some((summary) => summary.lastFetchedStatus === 'failed')) {
+          collection.status = 'failed';
+        } else if (summaries.some((summary) => summary.lastFetchedStatus === 'error')) {
+          collection.status = 'error';
+        } else if (summaries.some((summary) => summary.lastFetchedStatus === 'running')) {
+          collection.status = 'running';
+        } else if (summaries.some((summary) => summary.lastFetchedStatus === 'success')) {
+          collection.status = 'success';
         } else {
           collection.status = 'new';
         }
@@ -175,10 +170,10 @@ export default defineComponent({
     };
   },
   methods: {
-    deleteFile(event: Event, name: string) {
+    deleteFile(event: Event, collection: Collection) {
       this.confirm.require({
         header: 'Bestand en resultaten definitief verwijderen',
-        message: `Het bestand "${name}" en bijbehorende resultaten definitief van disk verwijderen?`,
+        message: `Het bestand "${collection.name}" en bijbehorende resultaten definitief van disk verwijderen?`,
         icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger',
         acceptLabel: 'Verwijderen',
@@ -187,7 +182,8 @@ export default defineComponent({
           // TODO Invoke API to delete the file
           this.toast.add({
             severity: 'info',
-            summary: `TODO Delete file ${name}`,
+            summary: `TODO Delete file ${collection.name}`,
+            detail: `Session ${collection.sessionId}`,
             life: 2000,
           });
         },

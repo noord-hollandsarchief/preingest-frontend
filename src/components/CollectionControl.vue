@@ -1,146 +1,153 @@
-<template v-if="collection">
-  <div class="collection card">
-    <div>
-      <h3>Gegevens</h3>
-      <p>Bestandsnaam: {{ filename }}</p>
-      <div v-if="collection">
-        <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
-        <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
-        <p>Untar sessie: {{ collection.unpackSessionId ?? 'niet gevonden' }}</p>
-        <p>Checksum: {{ collection.calculatedChecksum ?? 'niet berekend' }}</p>
-        <div class="p-fluid p-formgrid p-grid">
-          <div class="p-field p-col-12 p-md-3">
-            <label for="checksumType">Type checksum</label>
-            <Dropdown
-              id="checksumType"
-              v-model="collection.checksumType"
-              :options="checksumTypes"
-              optionLabel="name"
-              optionValue="code"
-              placeholder="Maak een keuze"
-            />
+<template>
+  <div v-if="collection">
+    <div class="collection card">
+      <div>
+        <h3>Gegevens</h3>
+        <p>Bestandsnaam: {{ collection.name }}</p>
+        <div>
+          <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
+          <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
+          <!-- TODO SHA-512 is far too long to display -->
+          <p>Checksum: {{ collection.calculatedChecksum ?? 'niet berekend' }}</p>
+          <div class="p-fluid p-formgrid p-grid">
+            <div class="p-field p-col-12 p-md-3">
+              <label for="checksumType">Type checksum</label>
+              <Dropdown
+                id="checksumType"
+                v-model="collection.checksumType"
+                :options="checksumTypes"
+                optionLabel="name"
+                optionValue="code"
+                placeholder="Maak een keuze"
+              />
+            </div>
+            <div class="p-field p-col-12 p-md-9">
+              <label for="expectedChecksum">Opgegeven checksum</label>
+              <InputText
+                id="expectedChecksum"
+                v-model="collection.expectedChecksum"
+                type="text"
+                placeholder="De checksum van de zorgdrager"
+              />
+            </div>
+            <div class="p-field p-col-12">
+              <label for="greenlist">Greenlist</label>
+              <!-- TODO the actual types would need to be far more specific? -->
+              <Chips
+                v-model="collection.greenlist"
+                separator=","
+                id="greenlist"
+                placeholder="Toegestane documenttypes, kommagescheiden: doc,xls,pdf"
+              />
+            </div>
+            <div class="p-field p-col-12">
+              <label for="description">Omschrijving</label>
+              <Textarea id="description" rows="2" :autoResize="true" />
+            </div>
           </div>
-          <div class="p-field p-col-12 p-md-9">
-            <label for="expectedChecksum">Opgegeven checksum</label>
-            <InputText
-              id="expectedChecksum"
-              v-model="collection.expectedChecksum"
-              type="text"
-              placeholder="De checksum van de zorgdrager"
-            />
-          </div>
-          <div class="p-field p-col-12">
-            <label for="greenlist">Greenlist</label>
-            <!-- TODO the actual types would need to be far more specific? -->
-            <Chips
-              v-model="collection.greenlist"
-              separator=","
-              id="greenlist"
-              placeholder="Toegestane documenttypes, kommagescheiden: doc,xls,pdf"
-            />
-          </div>
-          <div class="p-field p-col-12">
-            <label for="description">Omschrijving</label>
-            <Textarea id="description" rows="2" :autoResize="true" />
-          </div>
+          <Button label="Opslaan" icon="pi pi-save" class="p-button-success p-mr-2" @click="save" />
         </div>
-        <Button label="Opslaan" icon="pi pi-save" class="p-button-success p-mr-2" @click="save" />
       </div>
     </div>
-  </div>
 
-  <div class="card">
-    <h3>Verwerken</h3>
+    <div class="card">
+      <h3>Verwerken</h3>
 
-    <Toolbar class="p-mb-4">
-      <template #left>
-        <Button
-          :disabled="!hasSelection"
-          label="Start"
-          icon="pi pi-play"
-          class="p-button-success p-mr-2"
-          @click="runActions"
-        />
-      </template>
-
-      <template #right>
-        <Button
-          :disabled="true"
-          label="Ingest"
-          icon="pi pi-upload"
-          class="p-button-help p-mx-2"
-          @click="runIngest"
-        />
-      </template>
-    </Toolbar>
-
-    <DataTable
-      :value="steps"
-      :autoLayout="true"
-      v-model:selection="selectedSteps"
-      v-model:expandedRows="expandedRows"
-      @row-select="onStepSelect"
-      @row-unselect="onStepUnselect"
-      @row-expand="onStepExpand"
-      class="p-datatable-sm"
-      :rowClass="rowClass"
-    >
-      <Column :expander="true" headerStyle="width: 1rem" bodyStyle="padding: 0" />
-
-      <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-
-      <Column field="description" header="Actie">
-        <template #body="slotProps">
-          <span v-tooltip="slotProps.data.info">
-            {{ slotProps.data.description }}
-            <i v-if="slotProps.data.info" class="pi pi-info-circle"></i>
-          </span>
+      <Toolbar class="p-mb-4">
+        <template #left>
+          <Button
+            :disabled="!hasSelection"
+            label="Start"
+            icon="pi pi-play"
+            class="p-button-success p-mr-2"
+            @click="runActions"
+          />
         </template>
-      </Column>
 
-      <Column
-        field="lastStartDateTime"
-        header="Start"
-        headerClass="p-text-center"
-        bodyClass="p-text-center"
+        <template #right>
+          <Button
+            :disabled="true"
+            label="Ingest"
+            icon="pi pi-upload"
+            class="p-button-help p-mx-2"
+            @click="runIngest"
+          />
+        </template>
+      </Toolbar>
+
+      <DataTable
+        :value="steps"
+        :autoLayout="true"
+        v-model:selection="selectedSteps"
+        v-model:expandedRows="expandedRows"
+        @row-select="onStepSelect"
+        @row-unselect="onStepUnselect"
+        @row-expand="onStepExpand"
+        class="p-datatable-sm"
+        :rowClass="rowClass"
       >
-        <template #body="slotProps">
-          {{ formatDateString(slotProps.data.lastStartDateTime) }}
+        <Column :expander="true" headerStyle="width: 1rem" bodyStyle="padding: 0" />
+
+        <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+
+        <Column field="description" header="Actie">
+          <template #body="slotProps">
+            <span v-tooltip="slotProps.data.info">
+              {{ slotProps.data.description }}
+              <i v-if="slotProps.data.info" class="pi pi-info-circle"></i>
+            </span>
+          </template>
+        </Column>
+
+        <Column
+          field="lastStartDateTime"
+          header="Start"
+          headerClass="p-text-center"
+          bodyClass="p-text-center"
+        >
+          <template #body="slotProps">
+            {{ formatDateString(slotProps.data.lastStartDateTime) }}
+          </template>
+        </Column>
+
+        <Column
+          field="lastDuration"
+          header="Duur"
+          headerClass="p-text-center"
+          bodyClass="p-text-center"
+        ></Column>
+
+        <Column
+          field="status"
+          header="Status"
+          headerClass="p-text-center"
+          bodyClass="p-text-center"
+        >
+          <template #body="slotProps">
+            <Tag v-if="slotProps.data.status === 'wait'" severity="info">wachtrij</Tag>
+            <Tag v-else-if="slotProps.data.status === 'running'" severity="warning">bezig</Tag>
+            <Tag v-else-if="slotProps.data.status === 'success'" severity="success">gereed</Tag>
+            <Tag
+              v-else-if="slotProps.data.status === 'error'"
+              severity="danger"
+              v-tooltip="'De actie is uitgevoerd, maar er zijn fouten gevonden'"
+              >fout</Tag
+            >
+            <Tag
+              v-else-if="slotProps.data.status === 'failed'"
+              severity="danger"
+              v-tooltip="'De actie kon niet worden uitgevoerd'"
+              >mislukt</Tag
+            >
+          </template>
+        </Column>
+
+        <template #expansion="slotProps">
+          <div class="pre">{{ slotProps.data.result }}</div>
+          <a v-if="slotProps.data.downloadUrl" :href="slotProps.data.downloadUrl">Download</a>
         </template>
-      </Column>
-
-      <Column
-        field="lastDuration"
-        header="Duur"
-        headerClass="p-text-center"
-        bodyClass="p-text-center"
-      ></Column>
-
-      <Column field="status" header="Status" headerClass="p-text-center" bodyClass="p-text-center">
-        <template #body="slotProps">
-          <Tag v-if="slotProps.data.status === 'wait'" severity="info">wachtrij</Tag>
-          <Tag v-else-if="slotProps.data.status === 'running'" severity="warning">bezig</Tag>
-          <Tag v-else-if="slotProps.data.status === 'success'" severity="success">gereed</Tag>
-          <Tag
-            v-else-if="slotProps.data.status === 'error'"
-            severity="danger"
-            v-tooltip="'De actie is uitgevoerd, maar er zijn fouten gevonden'"
-            >fout</Tag
-          >
-          <Tag
-            v-else-if="slotProps.data.status === 'failed'"
-            severity="danger"
-            v-tooltip="'De actie kon niet worden uitgevoerd'"
-            >mislukt</Tag
-          >
-        </template>
-      </Column>
-
-      <template #expansion="slotProps">
-        <div class="pre">{{ slotProps.data.result }}</div>
-        <a v-if="slotProps.data.downloadUrl" :href="slotProps.data.downloadUrl">Download</a>
-      </template>
-    </DataTable>
+      </DataTable>
+    </div>
   </div>
 </template>
 
@@ -183,7 +190,7 @@ interface RowExpandEvent {
 
 export default defineComponent({
   props: {
-    filename: {
+    sessionId: {
       type: String,
       required: true,
     },
@@ -204,46 +211,32 @@ export default defineComponent({
       });
     };
 
+    // A custom action, to copy the result into the file detail overview
     const calculateChecksum = async (action: Action): Promise<ActionStatus> => {
+      if (!collection.value) {
+        throw Error('Programming error: no sessionId');
+      }
+
       // TODO enforce user choice rather than using default
-      if (!collection.value) {
-        throw Error('TODO: enforce checksum type selection');
-      }
-      const result = await api.getChecksum(
-        collection.value.name,
-        collection.value?.checksumType || 'SHA1'
-      );
-      collection.value.calculatedChecksum = result.message;
-      return 'success';
-    };
-
-    // TODO Remove when API uses single session for each file name
-    const unpack = async (action: Action): Promise<ActionStatus> => {
-      if (!collection.value) {
-        throw Error('Programming error: unpacking needs a file name');
-      }
-
-      // For the demo, unlike the other actions, the sessionId is the filename here
-      const unpackStatus = await api.triggerActionAndWaitForCompleted(
-        encodeURIComponent(collection.value.name),
-        action
+      const actionStatus = await api.triggerActionAndWaitForCompleted(
+        encodeURIComponent(collection.value?.sessionId),
+        action,
+        collection.value.checksumType || 'SHA1'
       );
 
-      // For the demo unpacking depends on calculation of the checksum, so we can now call
-      // getCollection which also fetches the checksum result which gives us the folder session id
-      // (which is also given in the triggerResult for unpack, but that's not returned by the
-      // service here).
-      const updatedCollection = await api.getCollection(collection.value.name);
-      collection.value.unpackSessionId = updatedCollection.unpackSessionId;
+      // TODO Maybe change triggerActionAndWaitForCompleted to return the result on success
+      collection.value.calculatedChecksum = await api.getLastCalculatedChecksum(
+        collection.value.sessionId
+      );
 
-      return unpackStatus;
+      return actionStatus;
     };
 
+    // Action(s) as specified in the API but not used for the frontend
     const hiddenActions = ['reporting/droid'];
+    // Action(s) that allow for special handling in the frontend
     const extendedSteps: Partial<Step>[] = [
-      // TODO custom function for calculate checksum needed?
       { id: 'calculate', allowRestart: true, triggerFn: calculateChecksum },
-      { id: 'unpack', triggerFn: unpack },
       { id: 'virusscan', allowRestart: true },
       { id: 'excel', allowRestart: true },
     ];
@@ -260,37 +253,22 @@ export default defineComponent({
 
     const { runWaitingActions } = useActionsRunner(collection, steps);
 
-    // For the demo: try to load the archive's state, to see if it's already unpacked
-    api.getCollection(props.filename).then(async (c) => {
+    // Load the file details and existing action states
+    api.getCollection(props.sessionId).then(async (c) => {
       collection.value = c;
 
-      // This may also exist when the checksum was calculated but the archive was not unpacked
-      // TODO API make this work like any other action
-      const checksumStep = steps.value.find((s) => s.id === 'calculate');
-      if (c.tarResultData && checksumStep) {
-        checksumStep.result = c.tarResultData.find(
-          (r) => r.actionName === 'ContainerChecksumHandler'
-        );
-        // TODO API Why do we get "message": "Geen resultaten."`?
-        checksumStep.lastFetchedStatus =
-          checksumStep.result?.message === 'Geen resultaten.' ? 'error' : 'success';
-        checksumStep.status = checksumStep.lastFetchedStatus;
-        // E.g. `"message": "SHA1 : cc8d8a7d1de976bc94f7baba4c24409817f296c1"`
-        collection.value.calculatedChecksum = checksumStep.result?.message;
-      }
+      // TODO this may fail with 500 Internal Server Error if results don't exist, so swallow any error
+      // Fetch the checksum to be displayed with the general file details
+      collection.value.calculatedChecksum = await api
+        .getLastCalculatedChecksum(collection.value.sessionId)
+        .catch(() => 'nog niet berekend');
 
-      // TODO we rely on the unpack session to get the session id
-
-      const sessionId = c.unpackSessionId;
-      if (sessionId) {
-        await api.updateActionResults(sessionId, steps.value, true);
-        steps.value.forEach(
-          // Allow the checksum to be recalculated any time
-          (step) =>
-            (step.fixedSelected =
-              !step.allowRestart && step.status === 'success' ? false : undefined)
-        );
-      }
+      await api.updateActionResults(collection.value?.sessionId, steps.value, true);
+      steps.value.forEach(
+        // Allow the checksum to be recalculated any time
+        (step) =>
+          (step.fixedSelected = !step.allowRestart && step.status === 'success' ? false : undefined)
+      );
     });
 
     return {
@@ -359,14 +337,12 @@ export default defineComponent({
       const step = event.data;
       if (this.collection && step.hasResultFile && !step.result && !step.downloadUrl) {
         if (step.resultFilename.endsWith('.json')) {
-          this.api
-            .getActionResult(this.collection.unpackSessionId, step.resultFilename)
-            .then((json) => {
-              step.result = json;
-            });
+          this.api.getActionResult(this.collection.sessionId, step.resultFilename).then((json) => {
+            step.result = json;
+          });
         } else {
           step.downloadUrl = this.api.getActionReportUrl(
-            this.collection.unpackSessionId,
+            this.collection.sessionId,
             step.resultFilename
           );
         }
