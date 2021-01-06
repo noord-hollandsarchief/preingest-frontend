@@ -96,13 +96,13 @@
               v-if="slotProps.data.status !== 'new'"
               icon="pi pi-eye"
               class="p-button-sm p-button-rounded"
-              v-tooltip="'Bekijk de resultaten'"
+              v-tooltip.left="'Bekijk de resultaten of ga verder met verwerken'"
             />
             <Button
               v-else
               icon="pi pi-play"
               class="p-button-sm p-button-rounded p-button-success"
-              v-tooltip="'Start verwerking van dit bestand'"
+              v-tooltip.left="'Start verwerking van dit bestand'"
             />
           </router-link>
 
@@ -110,7 +110,7 @@
             icon="pi pi-trash"
             class="p-button-sm p-button-rounded p-button-warning p-ml-2"
             @click="deleteFile($event, slotProps.data)"
-            v-tooltip="'Verwijder het bestand en de resultaten'"
+            v-tooltip.left="'Verwijder het bestand en de resultaten'"
           />
         </template>
       </Column>
