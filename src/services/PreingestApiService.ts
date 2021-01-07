@@ -212,21 +212,21 @@ export type TriggerActionResult = {
   actionId: string;
 };
 
+/**
+ * A partial definition of the results returned in `/api/output/json/:actionguid`
+ */
 export type ActionResult = {
-  // TODO Change API to use consistent casing (lower case in Collection#tarResultData)
-  SessionId: string;
-  sessionId: string;
-  Code: string;
-  ActionName: string;
-  actionName: string;
-  // The filename
-  CollectionItem: string;
-  Message: string;
-  message: string;
-  CreationTimestamp: string;
-  // Too bad, TS2589: Type instantiation is excessively deep and possibly infinite.
-  // [index: string]: AnyJson;
-  // item?: JsonMap;
+  summary: {
+    processed: number;
+    accepted: number;
+    rejected: number;
+    start: string;
+    end: string;
+  };
+  actionResult: {
+    resultName: 'Success' | 'Error' | 'Failed';
+  };
+  actionData?: string[];
 };
 
 export type GreenListActionResult = ActionResult & { InGreenList?: boolean };
@@ -308,10 +308,7 @@ export class PreingestApiService {
 
   // TODO API should we always return an array?
   // UnpackTarHandler.json, DroidValidationHandler.pdf and so on.
-  getActionResult = async (
-    sessionId: string,
-    resultFileName: string
-  ): Promise<ActionResult | ActionResult[]> => {
+  getActionResult = async (sessionId: string, resultFileName: string): Promise<ActionResult> => {
     // TODO this may fail with 500 Internal Server Error if results don't exist
     return this.fetchWithDefaults(`output/json/${sessionId}/${resultFileName}`);
   };
@@ -336,32 +333,29 @@ export class PreingestApiService {
     if (checksumStep) {
       const actionResult = await this.getActionResult(sessionId, checksumStep.resultFilename);
       if (actionResult) {
-        return (actionResult as ActionResult[])[0].Message;
+        return actionResult.actionData?.join(', ');
       }
     }
   };
 
-  // TODO remove when API returns status
-  private getFakeActionStatus = async (
+  // TODO remove when API returns status for the full collection
+  private fetchActionStatus = async (
     sessionId: string,
     action?: Action
   ): Promise<ActionStatus | undefined> => {
     if (!action) {
       return;
     }
-    if (['greenlist', 'validate'].includes(action.id)) {
-      if (action.resultFilename.endsWith('.json')) {
-        // While we fetch this, we could also store it in the action, but not for this demo workaround
-        const result = await this.getActionResult(sessionId, action.resultFilename);
-        switch (action.id) {
-          case 'greenlist':
-            return Array.isArray(result) &&
-              result.some((r) => (r as GreenListActionResult).InGreenList === false)
-              ? 'error'
-              : 'success';
-          case 'validate':
-            return Array.isArray(result) && result.length > 0 ? 'error' : 'success';
-        }
+    if (action.resultFilename.endsWith('.json')) {
+      // While we fetch this, we could also store it in the action, but not for this demo workaround
+      const result = await this.getActionResult(sessionId, action.resultFilename);
+      switch (result.actionResult.resultName) {
+        case 'Success':
+          return 'success';
+        case 'Error':
+          return 'error';
+        case 'Failed':
+          return 'failed';
       }
     }
   };
@@ -405,7 +399,7 @@ export class PreingestApiService {
 
         const action = actions.find((action) => action.name === name);
         const lastFetchedStatus =
-          (await this.getFakeActionStatus(sessionId, action)) ||
+          (await this.fetchActionStatus(sessionId, action)) ||
           (lastFailed ? 'failed' : lastCompleted ? 'success' : 'running');
 
         // action.status = action.status === 'wait' ? action.status : action.lastFetchedStatus;
@@ -499,7 +493,7 @@ export class PreingestApiService {
         // TODO this workaround may return `error` for disabled virusscan here, but `failed` after refresh
         // We may have gotten Started, Failed, Completed
         return (
-          (await this.getFakeActionStatus(sessionId, action)) ||
+          (await this.fetchActionStatus(sessionId, action)) ||
           (results.some((result) => result.name === 'Failed') ? 'failed' : 'success')
         );
       }
