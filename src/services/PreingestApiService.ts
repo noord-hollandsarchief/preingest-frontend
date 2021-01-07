@@ -101,8 +101,7 @@ export const actions: Action[] = [
     id: 'sidecar',
     dependsOn: ['unpack'],
     name: 'Sidecar',
-    // TODO API multiple files? We (also) need single file for result
-    resultFilename: 'SidecarValidationHandler_Samenvatting.json',
+    resultFilename: 'SidecarValidationHandler.json',
     description: 'Mappen en bestanden controleren op sidecarstructuur',
   },
   {
