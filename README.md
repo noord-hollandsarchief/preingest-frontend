@@ -38,6 +38,19 @@ rules, added `vue.config.js` to set the app's title, and added PrimeVue, PrimeIc
 
 The configuration is kept in [.env](./.env) files.
 
+### SCSS
+
+The free PrimeVue templates [are pure CSS](https://www.primefaces.org/designer/primevue) and do not
+expose any SASS variables:
+
+> PrimeVue only ships the generated CSS of Material, Bootstrap, Saga, Vela, Arya, Soho, Fluent UI
+> and legacy themes whereas Designer provides full access to the whole SASS structure and the
+> variables of these pre-built themes for easier customization.
+ 
+To reuse a style from an imported theme, add it to [_variables.scss](./src/scss/_variables.scss),
+but note that changing those will not affect the theme itself. Webpack [has been set up to include
+this file](./vue.config.js) in the SCSS of all custom components.
+
 ### Yarn
 
 - Download project dependencies: `yarn install`
