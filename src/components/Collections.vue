@@ -78,14 +78,14 @@
       </Column>
 
       <Column
-        header="Acties"
+        header="Voortgang"
         :sortable="false"
         :excludeGlobalFilter="true"
         headerClass="p-text-center"
         bodyClass="p-text-center"
       >
         <template #body="slotProps">
-          {{ slotProps.data.summaries?.length }}
+          <SessionProgress :summaries="slotProps.data.summaries" />
         </template>
       </Column>
 
@@ -122,6 +122,7 @@
 import { defineComponent, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/components/toast/useToast';
+import SessionProgress from '@/components/SessionProgress.vue';
 import { useApi } from '@/plugins/PreingestApi';
 import { ActionSummary, Collection } from '@/services/PreingestApiService';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
@@ -133,6 +134,7 @@ type CollectionWithStatus = Collection & {
 };
 
 export default defineComponent({
+  components: { SessionProgress },
   async setup() {
     const api = useApi();
     const confirm = useConfirm();

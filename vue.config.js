@@ -7,6 +7,20 @@ module.exports = {
     });
   },
 
+  css: {
+    loaderOptions: {
+      // See https://webpack.js.org/loaders/sass-loader/
+      sass: {
+        // Make sure that the files imported here only contain SASS code that doesn't get rendered,
+        // such as variables, mixins and functions. Otherwise, that code will end up repeated for
+        // each component in the final post-processed CSS file.
+        prependData: `
+          @import "@/scss/_variables.scss";
+        `,
+      },
+    },
+  },
+
   // Proxy the API requests to avoid CORS issues; for production the API should support CORS or
   // should be hosted on the same protocol, domain and port.
   configureWebpack: {

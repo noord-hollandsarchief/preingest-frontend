@@ -1,0 +1,17 @@
+// This file is imported into all components thru ../vue.config.js
+
+// Copy some values from the theme imported in `../main.ts`, for re-use in our own templates.
+// This only applies to the custom components; changing these values does not affect the
+// theme at all, as the free templates are plain CSS and do not expose the variable that are
+// listed on https://www.primefaces.org/designer/api/primevue/3.0.0/
+
+// See node_modules/primevue/resources/themes/saga-blue/theme.css
+$success: #689f38;
+$info: #0288d1;
+$warning: #fbc02d;
+$danger: #d32f2f;
+
+$successButtonBg: $success;
+$infoButtonBg: $info;
+$warningButtonBg: $warning;
+$dangerButtonBg: $danger;
