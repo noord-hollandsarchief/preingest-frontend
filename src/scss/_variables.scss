@@ -1,6 +1,10 @@
 // This file is imported into all components thru ../vue.config.js
+//
+// NOTE: make sure that this file only contain SASS code that doesn't get rendered, such as
+// variables, mixins and functions. Otherwise, that code will end up repeated for each component
+// in the final post-processed CSS file.
 
-// See also https://coolors.co/dc0714-ba7106-1c3e61-267a99-9aa88d-ebebeb
+// Noord-Hollands Archief colors; see https://coolors.co/dc0714-ba7106-1c3e61-267a99-9aa88d-ebebeb
 $nha-indigo: #1c3e61;
 $nha-mint: #9aa88d;
 $nha-ochre: #ba7106;
