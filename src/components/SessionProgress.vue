@@ -54,6 +54,10 @@ export default defineComponent({
 </script>
 
 <style scoped lang="scss">
+.progress {
+  cursor: default;
+  font-size: 1.1vw;
+}
 .success {
   color: $successButtonBg;
 }
