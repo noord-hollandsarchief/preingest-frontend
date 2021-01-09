@@ -1,16 +1,32 @@
 // This file is imported into all components thru ../vue.config.js
 
+// See also https://coolors.co/dc0714-ba7106-1c3e61-267a99-9aa88d-ebebeb
+$nha-indigo: #1c3e61;
+$nha-mint: #9aa88d;
+$nha-ochre: #ba7106;
+$nha-red: #dc0714;
+$nha-cg-blue: #267a99;
+$nha-gray: #ebebeb;
+
+$logo-url: './assets/logo/logo-nha-edepot.svg';
+
 // Copy some values from the theme imported in `../main.ts`, for re-use in our own templates.
 // This only applies to the custom components; changing these values does not affect the
 // theme at all, as the free templates are plain CSS and do not expose the variable that are
 // listed on https://www.primefaces.org/designer/api/primevue/3.0.0/
 
-// See node_modules/primevue/resources/themes/saga-blue/theme.css
+// App-specific naming, values from node_modules/primevue/resources/themes/saga-blue/theme.css
 $success: #689f38;
 $info: #0288d1;
 $warning: #fbc02d;
 $danger: #d32f2f;
 
+$bodyBg: $nha-gray;
+$linkColor: $nha-indigo;
+$linkActiveColor: $nha-ochre;
+
+// Naming inherited from PrimeVue theme API (but not affecting the theme itself; see above);
+$textColor: $nha-indigo;
 $successButtonBg: $success;
 $infoButtonBg: $info;
 $warningButtonBg: $warning;

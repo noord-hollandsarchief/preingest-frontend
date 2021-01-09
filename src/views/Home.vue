@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <h1>Aanleveringen</h1>
+    <h1>Pre-ingest</h1>
     <Collections />
   </div>
 </template>
