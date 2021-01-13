@@ -93,7 +93,7 @@
         <template #body="slotProps">
           <router-link :to="`/s/${slotProps.data.sessionId}`" style="text-decoration: none">
             <Button
-              v-if="slotProps.data.status !== 'new'"
+              v-if="slotProps.data.overallStatus !== 'New'"
               icon="pi pi-eye"
               class="p-button-sm p-button-rounded"
               v-tooltip.left="'Bekijk de resultaten of ga verder met verwerken'"
