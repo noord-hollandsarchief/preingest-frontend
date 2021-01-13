@@ -1,8 +1,10 @@
 <template>
   <div id="header" class="p-d-flex">
     <div id="nav">
-      <router-link to="/">start</router-link> |
-      <router-link to="/help">help</router-link>
+      <!-- TODO v-if="$router.currentRoute.name != 'routeNameHere'" -->
+      <span v-if="$route.path !== '/'">
+        <router-link to="/">&laquo; overzicht</router-link>
+      </span>
     </div>
     <div id="logo" class="p-ml-auto"></div>
   </div>
@@ -82,12 +84,10 @@ body {
 }
 
 .card {
-  background-color: #fff;
-  padding: 2rem;
-  -webkit-box-shadow: 0 2px 1px -1px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.14),
-    0 1px 3px 0 rgba(0, 0, 0, 0.12);
-  box-shadow: 0 2px 1px -1px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.14),
-    0 1px 3px 0 rgba(0, 0, 0, 0.12);
+  background-color: $panelContentBg;
+  padding: $cardBodyPadding;
+  -webkit-box-shadow: $cardShadow;
+  box-shadow: $cardShadow;
   border-radius: 4px;
   margin-bottom: 2rem;
   text-align: left;
