@@ -11,37 +11,40 @@
 
 <script lang="ts">
 import { defineComponent, PropType, toRefs, computed } from 'vue';
-import { ActionSummary, actions, Action } from '@/services/PreingestApiService';
+import { stepDefinitions, Action, Step } from '@/services/PreingestApiService';
 
 export default defineComponent({
   name: 'SessionProgress',
   props: {
-    summaries: {
-      type: Object as PropType<ActionSummary[]>,
+    preingestActions: {
+      type: Object as PropType<Action[]>,
     },
   },
   setup(props) {
-    const { summaries } = toRefs(props);
+    const { preingestActions } = toRefs(props);
 
-    const steps = computed<Action[]>(() => {
-      // TODO remove the unused action from the service
-      return actions
-        .filter((action) => action.id !== 'reporting/droid')
-        .map((action) => {
-          // Local copy to allow for setting its status
-          const step = { ...action };
-          const summary = summaries?.value?.find((summary) => summary.name === action.name);
-          step.status = summary ? summary.lastFetchedStatus : undefined;
-          return step;
-        });
+    // Hydrate a list of possible steps with the status of their last executed action, if any
+    const steps = computed<Step[]>(() => {
+      return stepDefinitions.map((step) => {
+        const summaries = preingestActions?.value?.filter(
+          (summary) => summary.name === step.actionName
+        );
+        // Local copy to allow for setting its status
+        return {
+          ...step,
+          status: summaries ? summaries.pop()?.actionStatus : undefined,
+        };
+        // TODO does the above "as" hide an error?
+      });
     });
 
-    const stateClass = (action?: Action) => {
+    const stateClass = (step?: Step) => {
       return {
-        none: !action?.status,
-        success: action?.status === 'success',
-        error: action?.status === 'error',
-        failed: action?.status === 'failed',
+        none: !step?.status,
+        executing: step?.status === 'Executing',
+        success: step?.status === 'Success',
+        error: step?.status === 'Error',
+        failed: step?.status === 'Failed',
       };
     };
 
@@ -57,6 +60,9 @@ export default defineComponent({
 .progress {
   cursor: default;
   font-size: 1.1vw;
+}
+.executing {
+  color: $infoButtonBg;
 }
 .success {
   color: $successButtonBg;

@@ -31,61 +31,103 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
   { name: 'SHA-512', code: 'SHA512' },
 ];
 
-// 'wait' is currently only known in the frontend, which controls the queue
-export type ActionStatus = 'wait' | 'running' | 'success' | 'error' | 'failed';
+// `Wait` is currently only known in the frontend, which controls the queue, but that will change.
+// In the future this will also need some "Ready for ingest" and "Done" states.
+export type ActionStatus = 'Wait' | 'Executing' | 'Success' | 'Error' | 'Failed';
 
 export type ActionSummary = {
-  // Like `Virusscan` and `Droid - PDF report`
-  name: string;
-  lastStartDateTime?: string;
-  lastEndDateTime?: string;
-  lastDuration?: string;
-  lastFetchedStatus?: ActionStatus;
-  hasResultFile?: boolean;
+  processed: number;
+  accepted: number;
+  rejected: number;
+  start: string;
+  end: string;
 };
 
-export type Action = DependentItem &
-  ActionSummary & {
-    description: string;
-    info?: string;
-    resultFilename: string;
-    // The HTTP method, default POST
-    method?: string;
-    result?: ActionResult | ActionResult[];
-    status?: ActionStatus;
-    /**
-     * A custom function to trigger an action; if not set then {@link triggerActionAndWaitForCompleted}
-     * is used.
-     */
-    triggerFn?: (action: Action) => Promise<ActionStatus>;
-  };
+/**
+ * Partial definition of the action results in the responses of `/api/output/collection` and
+ * `/api/output/collections`.
+ *
+ * Note that a single Action can occur more than once in the API responses, if executed multiple
+ * times for a single Step, or if multiple Steps use the same action with different parameters.
+ */
+export type Action = {
+  // The status of the actual execution, but not (yet) including `Waiting`
+  actionStatus: ActionStatus;
+  creation: string;
+  // The handler name, like `UnpackTarHandler`, `ContainerChecksumHandler` or `Droid - PDF report`
+  name: string;
+  // Like ContainerChecksumHandler.json and UnpackTarHandler.json
+  // TODO API singular
+  resultFiles: string;
+  // TODO API rename to actionId?
+  processId: string;
+  summary?: ActionSummary;
+};
 
 /**
- * The actions supported by this API. The `id` must match the URL path, like `virusscan` in
- * `/preingest/virusscan/:guid` and like `reporting/pdf` for `/preingest/reporting/:type/:guid`
- * The `name` must match the name in the status results, like `Virusscan` and `Droid - PDF report`.
+ * A _possible_ Action with parameters (a single Action can be defined in multiple Steps with
+ * different parameters), enriched with fixed details for API calls, for frontend display and about
+ * dependencies on other steps, and hydrated with current frontend state (like being selected to be
+ * executed, or being locked to prevent selection) and the data from an actually executed action if
+ * available. If a Step was executed multiple times, then a Step will only care about the last
+ * occurrence of the linked Action.
  */
-export const actions: Action[] = [
+export type Step = DependentItem & {
+  // The action name. This must match the name in the API status results, like `UnpackTarHandler`,
+  // `ContainerChecksumHandler` and `Droid - PDF report`.
+  actionName: string;
+  description: string;
+  // Tooltip help text
+  info?: string;
+  // The HTTP method, default POST
+  method?: string;
+  /**
+   * A custom function to trigger an action; if not set then {@link triggerStepAndWaitForCompleted}
+   * is used.
+   */
+  triggerFn?: (step: Step) => Promise<ActionStatus>;
+  allowRestart?: boolean;
+
+  // Transient details.
+  // The status as shown in the frontend, including `Waiting` or no status at all
+  status?: ActionStatus;
+  lastAction?: Action;
+  lastStart?: string;
+  lastDuration?: string;
+  // The initial or current selection state
+  selected?: boolean;
+  /**
+   * A fixed value for selected (`false` forces the step to always be non-selected), typically set
+   * to `false` when a step has completed unless `allowRestart` is enabled.
+   */
+  fixedSelected?: boolean;
+  result?: ActionResult;
+  downloadUrl?: string;
+};
+
+/**
+ * The Steps used in this frontend. The `id` must match the URL path, like `virusscan` in
+ * `/preingest/virusscan/:guid` and like `reporting/pdf` for `/preingest/reporting/:type/:guid`
+ * The `actionName` must match the name in the status results, like `UnpackTarHandler` and `Droid - PDF report`.
+ */
+export const stepDefinitions: Step[] = [
   {
     id: 'calculate',
     dependsOn: [],
-    name: 'Calculate',
-    resultFilename: 'ContainerChecksumHandler.json',
+    actionName: 'ContainerChecksumHandler',
     method: 'GET',
     description: 'Checksum berekenen',
   },
   {
     id: 'unpack',
     dependsOn: [],
-    name: 'Unpack',
-    resultFilename: 'UnpackTarHandler.json',
+    actionName: 'UnpackTarHandler',
     description: 'Archief uitpakken',
   },
   {
     id: 'virusscan',
     dependsOn: ['unpack'],
-    name: 'Virusscan',
-    resultFilename: 'ScanVirusValidationHandler.json',
+    actionName: 'ScanVirusValidationHandler',
     description: 'Viruscontrole',
     // As set in `allowRestart: true` in the CollectionControl component
     info: 'In de demo kan de viruscontrole meerdere keren gestart worden',
@@ -93,80 +135,62 @@ export const actions: Action[] = [
   {
     id: 'naming',
     dependsOn: ['unpack'],
-    name: 'Naming',
-    resultFilename: 'NamingValidationHandler.json',
+    actionName: 'NamingValidationHandler',
     description: 'Bestandsnamen controleren',
   },
   {
     id: 'sidecar',
     dependsOn: ['unpack'],
-    name: 'Sidecar',
-    resultFilename: 'SidecarValidationHandler.json',
+    actionName: 'SidecarValidationHandler',
     description: 'Mappen en bestanden controleren op sidecarstructuur',
   },
   {
     id: 'profiling',
     dependsOn: ['unpack'],
-    name: 'Droid - Profiling',
-    resultFilename: 'DroidValidationHandler.droid',
+    actionName: 'Droid - Profiling',
     description: 'DROID bestandsclassificatie voorbereiden',
   },
   {
     id: 'exporting',
     dependsOn: ['profiling'],
-    name: 'Droid - CSV report',
-    resultFilename: 'DroidValidationHandler.csv',
+    actionName: 'Droid - CSV report',
     description: 'DROID metagegevens exporteren naar CSV',
-  },
-  {
-    id: 'reporting/droid',
-    dependsOn: ['profiling'],
-    // TODO validate name as soon API supports this
-    name: 'TODO Droid - Droid report',
-    resultFilename: 'DroidValidationHandler.droid',
-    description: 'DROID metagegevens exporteren',
   },
   {
     id: 'reporting/pdf',
     dependsOn: ['profiling'],
-    name: 'Droid - PDF report',
-    resultFilename: 'DroidValidationHandler.pdf',
+    actionName: 'Droid - PDF report',
     description: 'DROID metagegevens exporteren naar PDF',
   },
   {
     id: 'reporting/planets',
     dependsOn: ['profiling'],
-    name: 'Droid - Planets XML report',
-    resultFilename: 'DroidValidationHandler.planets.xml',
+    actionName: 'Droid - Planets XML report',
     description: 'DROID metagegevens exporteren naar XML',
   },
   {
     id: 'greenlist',
     dependsOn: ['exporting'],
-    name: 'Greenlist',
-    resultFilename: 'GreenListHandler.json',
+    actionName: 'GreenListHandler',
     description: 'Controleren of alle bestandstypen aan greenlist voldoen',
   },
   {
     id: 'encoding',
     dependsOn: ['unpack'],
-    name: 'Encoding',
-    resultFilename: 'EncodingHandler.json',
+    actionName: 'EncodingHandler',
     description: 'Encoding metadatabestanden controleren',
   },
   {
     id: 'validate',
     dependsOn: ['unpack'],
-    name: 'Metadata',
-    resultFilename: 'MetadataValidationHandler.json',
+    actionName: 'MetadataValidationHandler',
     description: 'Metadata valideren met XML-schema (XSD) en Schematron',
   },
   {
     id: 'transform',
     // If ever running tasks in parallel, then greenlist needs to be run first, if selected
     dependsOn: ['unpack'],
-    name: 'TransformXIP',
-    resultFilename: 'TransformationHandler.json',
+    actionName: 'TransformationHandler',
     description: 'Metadatabestanden omzetten naar XIP bestandsformaat',
     info:
       'Dit verandert de mapinhoud, dus heeft effect op de controle van de greenlist als die pas later wordt uitgevoerd',
@@ -174,17 +198,15 @@ export const actions: Action[] = [
   {
     id: 'sip',
     dependsOn: ['transform'],
-    // TODO validate name when API supports this
-    name: 'TODO SIP',
-    resultFilename: 'TODO',
+    // TODO API validate name when API supports this
+    actionName: 'TODO SIP',
     description: 'Bestanden omzetten naar SIP bestandsformaat',
   },
   {
     id: 'excel',
     dependsOn: [],
-    // TODO validate name when API supports this
-    name: 'TODO Excel',
-    resultFilename: 'TODO',
+    // TODO API validate name when API supports this
+    actionName: 'TODO Excel',
     description: 'Excel rapportage',
     info: 'Nog niet beschikbaar',
   },
@@ -193,9 +215,12 @@ export const actions: Action[] = [
 export type Collection = {
   // The file name
   name: string;
+  // Also the folder name on the file system
   sessionId: string;
   creationTime: string;
   size: number;
+  overallStatus: ActionStatus;
+  preingest: Action[];
   // The following attributes are not (yet) fetched from the API, but populated in the frontend
   calculatedChecksum?: string;
   // TODO Add to API
@@ -215,40 +240,12 @@ export type TriggerActionResult = {
  * A partial definition of the results returned in `/api/output/json/:actionguid`
  */
 export type ActionResult = {
-  summary: {
-    processed: number;
-    accepted: number;
-    rejected: number;
-    start: string;
-    end: string;
-  };
+  summary: ActionSummary;
   actionResult: {
-    resultName: 'Success' | 'Error' | 'Failed';
+    // TODO API in `/api/output/json/:actionguid` this is called resultValue, and do we need the nesting?
+    name: ActionStatus;
   };
   actionData?: string[];
-};
-
-export type GreenListActionResult = ActionResult & { InGreenList?: boolean };
-
-// A simplified response of the /api/status/result/:actionGuid API, excluding all GUIDs
-export type StatusResult = {
-  // Failed is often/always followed by Completed
-  name: 'Started' | 'Failed' | 'Completed';
-  // API why not creationTimestamp to match other APIs?
-  creation: string;
-};
-
-// TODO API Why are there so many GUIDs in this response, requiring excessive nesting?
-// A simplified response of the /api/status/complete/:guid API, excluding all GUIDs
-export type CompleteStatusResult = {
-  session: {
-    // A name like `Virusscan` and `Droid - PDF report`
-    name: string;
-  };
-  status: StatusResult;
-  message?: {
-    description: string;
-  };
 };
 
 export class PreingestApiService {
@@ -282,12 +279,12 @@ export class PreingestApiService {
     throw `Geen resultaat na ${tries} pogingen in ${dayjs().diff(startTime, 'm')} minuten.`;
   }
 
-  /**
-   * TODO Replace with proper API call without the need to get the full list
-   */
+  getCollections = async (): Promise<Collection[]> => {
+    return this.fetchWithDefaults('output/collections');
+  };
+
   getCollection = async (sessionId: string): Promise<Collection> => {
-    const collections = await this.getCollections();
-    const collection = collections.find((c) => c.sessionId === sessionId);
+    const collection = await this.fetchWithDefaults<Collection>(`output/collection/${sessionId}`);
 
     if (!collection) {
       this.toast.add({
@@ -301,203 +298,75 @@ export class PreingestApiService {
     return collection;
   };
 
-  getCollections = async (): Promise<Collection[]> => {
-    return this.fetchWithDefaults('output/collections');
-  };
-
-  // TODO API should we always return an array?
-  // UnpackTarHandler.json, DroidValidationHandler.pdf and so on.
+  // UnpackTarHandler.json and so on.
   getActionResult = async (sessionId: string, resultFileName: string): Promise<ActionResult> => {
     // TODO this may fail with 500 Internal Server Error if results don't exist
     return this.fetchWithDefaults(`output/json/${sessionId}/${resultFileName}`);
   };
 
+  // DroidValidationHandler.pdf and so on.
   getActionReportUrl = (sessionId: string, name: string) => {
     return `${this.baseUrl}/output/report/${sessionId}/${name}`;
-  };
-
-  getSessions = async (): Promise<string[]> => {
-    return this.fetchWithDefaults('output/sessions');
-  };
-
-  getResultFilenames = async (guid: string): Promise<string[]> => {
-    return this.fetchWithDefaults(`output/results/${guid}`);
   };
 
   /**
    * Get the existing checksum result, if any.
    */
-  getLastCalculatedChecksum = async (sessionId: string): Promise<string | undefined> => {
-    const checksumStep = actions.find((a) => a.id === 'calculate');
+  getLastCalculatedChecksum = async (collection: Collection): Promise<string | undefined> => {
+    const checksumStep = collection.preingest.find((a) => a.name === 'ContainerChecksumHandler');
     if (checksumStep) {
-      const actionResult = await this.getActionResult(sessionId, checksumStep.resultFilename);
+      const actionResult = await this.getActionResult(
+        collection.sessionId,
+        checksumStep.resultFiles
+      );
       if (actionResult) {
         return actionResult.actionData?.join(', ');
       }
     }
   };
 
-  // TODO remove when API returns status for the full collection
-  private fetchActionStatus = async (
-    sessionId: string,
-    action?: Action
-  ): Promise<ActionStatus | undefined> => {
-    if (!action) {
-      return;
-    }
-    if (action.resultFilename.endsWith('.json')) {
-      // While we fetch this, we could also store it in the action, but not for this demo workaround
-      const result = await this.getActionResult(sessionId, action.resultFilename);
-      switch (result.actionResult.resultName) {
-        case 'Success':
-          return 'success';
-        case 'Error':
-          return 'error';
-        case 'Failed':
-          return 'failed';
-      }
-    }
-  };
-
-  // TODO API remove timezone workaround
-  fixTimezone = (s?: string) => {
-    return s ? s + 'Z' : undefined;
-  };
-
-  getActionSummaries = async (sessionId: string): Promise<ActionSummary[]> => {
-    // TODO API is this sorted?
-    const results: CompleteStatusResult[] = await this.fetchWithDefaults(
-      `status/complete/${sessionId}`
-    );
-
-    const names = [...new Set(results.map((result) => result.session.name))];
-    return Promise.all(
-      names.map(async (name) => {
-        const actionResults = results.filter((result) => result.session.name === name);
-
-        // If an action fails badly, then the API will return Started, Failed and Completed. If an
-        // action completes normally, then ... TODO API what to expect?
-        const lastStart = actionResults.reduce((acc, result) => {
-          return result.status.name === 'Started' && result.status.creation > acc.status.creation
-            ? result
-            : acc;
-        });
-
-        const lastFailed = actionResults.find((action) => {
-          return (
-            action.status.name === 'Failed' && action.status.creation >= lastStart.status.creation
-          );
-        });
-
-        const lastCompleted = actionResults.find((action) => {
-          return (
-            action.status.name === 'Completed' &&
-            action.status.creation >= lastStart.status.creation
-          );
-        });
-
-        const action = actions.find((action) => action.name === name);
-        const lastFetchedStatus =
-          (await this.fetchActionStatus(sessionId, action)) ||
-          (lastFailed ? 'failed' : lastCompleted ? 'success' : 'running');
-
-        // action.status = action.status === 'wait' ? action.status : action.lastFetchedStatus;
-        const lastStartDateTime = this.fixTimezone(lastStart.status.creation) || '';
-        const lastEndDateTime = this.fixTimezone(
-          lastFailed?.status?.creation || lastCompleted?.status?.creation
-        );
-
-        return {
-          name,
-          lastStartDateTime,
-          lastEndDateTime,
-          // Will yield the time up to now if not Completed/Failed yet
-          lastDuration: formatDateDifference(lastStartDateTime, lastEndDateTime),
-          lastFetchedStatus,
-          // TODO copy the message as well? Especially for (fatal) errors?
-        };
-      })
-    );
-  };
-
-  updateActionResults = async (
-    sessionId: string,
-    actions: Action[],
-    checkResultFiles = false
-  ): Promise<void> => {
-    // actions.forEach((a) => (a.status = undefined));
-
-    const [summaries, resultFiles] = (await Promise.all([
-      this.getActionSummaries(sessionId),
-      checkResultFiles ? this.getResultFilenames(sessionId) : Promise.resolve([]),
-    ])) as [ActionSummary[], string[]];
-
-    for (const action of actions) {
-      const actionResult = summaries.find((result) => result.name === action.name);
-      if (actionResult) {
-        Object.assign(action, actionResult);
-      }
-      action.status = action.status === 'wait' ? action.status : action.lastFetchedStatus;
-      action.hasResultFile = resultFiles.some((name) => name === action.resultFilename);
-    }
-  };
-
   /**
-   * Send an API command to trigger an action, and poll for its (new) results.
+   * Send an API command to trigger the Action for a Step, and poll for its (new) results.
    */
-  triggerActionAndWaitForCompleted = async (
+  triggerStepAndWaitForCompleted = async (
     sessionId: string,
-    action: Action,
+    step: Step,
     actionSuffix = ''
   ): Promise<ActionStatus> => {
-    // TODO API this assume no old results exist; for some handlers we could get a timestamp
-    // but not for, e.g., the greenlist
-    // TODO remove after demo?
-
     const triggerResult = await this.fetchWithDefaults<TriggerActionResult>(
-      `preingest/${action.id}${actionSuffix ? '/' + actionSuffix : ''}/${sessionId}`,
+      `preingest/${step.id}${actionSuffix ? '/' + actionSuffix : ''}/${sessionId}`,
       {
-        method: action.method || 'POST',
+        method: step.method || 'POST',
       }
     );
 
     // TODO API is an action always accepted?
 
     // TODO maybe these also need to be cleared when using custom triggerFn?
-    action.result = undefined;
-    action.hasResultFile = false;
-    action.lastStartDateTime = dayjs().toISOString();
-    action.lastEndDateTime = undefined;
+    step.result = undefined;
+    step.lastAction = undefined;
+    step.lastStart = dayjs().toISOString();
 
     // TODO maybe delay just a bit here?
     return this.repeatUntilResult(async () => {
       // Compute duration up to now
-      action.lastDuration = formatDateDifference(action.lastStartDateTime || '');
-      const results: StatusResult[] = await this.fetchWithDefaults(
-        `status/result/${triggerResult.actionId}`
+      step.lastDuration = formatDateDifference(step.lastStart || '');
+
+      // We could also only get `status/result/${triggerResult.actionId}` but then we'd need to
+      // derive the last status ourselves. So just get the full collection.
+      const collection = await this.getCollection(sessionId);
+      const lastResult = collection.preingest.find(
+        (action) => action.processId === triggerResult.actionId
       );
-      const lastResult = results[results.length - 1];
-      if (lastResult.name === 'Completed') {
-        // TODO remove timezone workaround
-        action.lastEndDateTime = lastResult.creation + 'Z';
-        action.lastDuration = formatDateDifference(
-          action.lastStartDateTime || '',
-          action.lastEndDateTime
-        );
 
-        // TODO merge with other code that determines this
-        action.hasResultFile = true;
+      step.lastAction = lastResult;
 
-        // TODO make API return success/error
-        // TODO this workaround may return `error` for disabled virusscan here, but `failed` after refresh
-        // We may have gotten Started, Failed, Completed
-        return (
-          (await this.fetchActionStatus(sessionId, action)) ||
-          (results.some((result) => result.name === 'Failed') ? 'failed' : 'success')
-        );
-      }
-      // Repeat
-      return undefined;
+      // When completed at this point, we could copy the summary's start time into action.lastStart,
+      // and even calculate a more precise duration using the summary's start and end, but that may
+      // also round down a second, which is just confusing.
+
+      // Return a result when done, or undefined to repeat
+      return lastResult?.actionStatus === 'Executing' ? undefined : lastResult?.actionStatus;
     });
   };
 
@@ -541,31 +410,6 @@ export class PreingestApiService {
       throw new Error(res.statusText);
     }
 
-    const result = await res.json();
-    this.debug(result, path);
-    return result;
+    return await res.json();
   };
-
-  // TODO remove debug toast
-  private debug = (data: { [index: string]: unknown }, path?: string) => {
-    // if (Array.isArray(data)) {
-    //   this.toast.add({
-    //     severity: 'info',
-    //     summary: path ?? 'Pre-ingest API',
-    //     detail: `${data.length} ${data.length === 1 ? 'resultaat' : 'resultaten'}`,
-    //     life: 2000,
-    //   });
-    // }
-  };
-  //   const keys = Object.keys(data);
-  //   const firstChild = data[keys[0]];
-  //   if (keys.length === 1 && Array.isArray(firstChild)) {
-  //     this.toast.add({
-  //       severity: 'info',
-  //       summary: 'API',
-  //       detail: `${firstChild.length} ${firstChild.length === 1 ? 'resultaat' : 'resultaten'}`,
-  //       life: 1000,
-  //     });
-  //   }
-  // };
 }

@@ -54,22 +54,22 @@
         bodyClass="p-text-center"
       >
         <template #body="slotProps">
-          <Tag v-if="slotProps.data.status === 'new'" severity="info">nieuw</Tag>
-          <Tag v-else-if="slotProps.data.status === 'running'" severity="warning">bezig</Tag>
+          <Tag v-if="slotProps.data.overallStatus === 'New'" severity="info">nieuw</Tag>
+          <Tag v-else-if="slotProps.data.overallStatus === 'Running'" severity="warning">bezig</Tag>
           <Tag
-            v-else-if="slotProps.data.status === 'success'"
+            v-else-if="slotProps.data.overallStatus === 'Success'"
             severity="success"
             v-tooltip="'Alle geselecteerde acties zijn zonder fouten uitgevoerd'"
             >gereed</Tag
           >
           <Tag
-            v-else-if="slotProps.data.status === 'error'"
+            v-else-if="slotProps.data.overallStatus === 'Error'"
             severity="danger"
             v-tooltip="'Alle geselecteerde acties zijn uitgevoerd, maar er zijn fouten gevonden'"
             >fout</Tag
           >
           <Tag
-            v-else-if="slotProps.data.status === 'failed'"
+            v-else-if="slotProps.data.overallStatus === 'Failed'"
             severity="danger"
             v-tooltip="'Een of meer acties konden niet worden uitgevoerd'"
             >mislukt</Tag
@@ -85,7 +85,7 @@
         bodyClass="p-text-center"
       >
         <template #body="slotProps">
-          <SessionProgress :summaries="slotProps.data.summaries" />
+          <SessionProgress :preingestActions="slotProps.data.preingest" />
         </template>
       </Column>
 
@@ -124,14 +124,8 @@ import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/components/toast/useToast';
 import SessionProgress from '@/components/SessionProgress.vue';
 import { useApi } from '@/plugins/PreingestApi';
-import { ActionSummary, Collection } from '@/services/PreingestApiService';
+import { Collection } from '@/services/PreingestApiService';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
-
-type CollectionWithStatus = Collection & {
-  summaries?: ActionSummary[];
-  // TODO This would also need some "done" state for "ingested"
-  status?: 'new' | 'running' | 'success' | 'error' | 'failed';
-};
 
 export default defineComponent({
   components: { SessionProgress },
@@ -141,25 +135,7 @@ export default defineComponent({
     const toast = useToast();
     const filters = ref({});
     const multiSortMeta = ref([{ field: 'creationTime', order: 1 }]);
-    const collections = ref<CollectionWithStatus[]>(await api.getCollections());
-
-    // TODO Can we change the API to avoid this?
-    collections.value.forEach((collection) => {
-      api.getActionSummaries(collection.sessionId).then((summaries) => {
-        collection.summaries = summaries;
-        if (summaries.some((summary) => summary.lastFetchedStatus === 'failed')) {
-          collection.status = 'failed';
-        } else if (summaries.some((summary) => summary.lastFetchedStatus === 'error')) {
-          collection.status = 'error';
-        } else if (summaries.some((summary) => summary.lastFetchedStatus === 'running')) {
-          collection.status = 'running';
-        } else if (summaries.some((summary) => summary.lastFetchedStatus === 'success')) {
-          collection.status = 'success';
-        } else {
-          collection.status = 'new';
-        }
-      });
-    });
+    const collections = ref<Collection[]>(await api.getCollections());
 
     return {
       formatDateString,
