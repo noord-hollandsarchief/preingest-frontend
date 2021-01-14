@@ -203,12 +203,10 @@ export const stepDefinitions: Step[] = [
     description: 'Bestanden omzetten naar SIP bestandsformaat',
   },
   {
-    id: 'excel',
+    id: 'excelcreator',
     dependsOn: [],
-    // TODO API validate name when API supports this
-    actionName: 'TODO Excel',
+    actionName: 'ExcelCreatorHandler',
     description: 'Excel rapportage',
-    info: 'Nog niet beschikbaar',
   },
 ];
 

@@ -223,7 +223,7 @@ export default defineComponent({
     const extendedSteps: Partial<Step>[] = [
       { id: 'calculate', allowRestart: true, triggerFn: calculateChecksum },
       { id: 'virusscan', allowRestart: true },
-      { id: 'excel', allowRestart: true },
+      { id: 'excelcreator', allowRestart: true },
     ];
 
     // Copy the definition of the actions into steps
