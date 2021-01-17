@@ -152,10 +152,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, onUnmounted, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
+import { useCollectionStatusWatcher } from '@/composables/useCollectionStatusWatcher';
 import { useStepsRunner } from '@/composables/useStepsRunner';
 import {
   ActionStatus,
@@ -237,6 +238,10 @@ export default defineComponent({
     selectedSteps.value = steps.value.filter((step) => step.selected);
 
     const { runWaitingSteps } = useStepsRunner(collection, steps);
+
+    const { startWatcher, stopWatcher } = useCollectionStatusWatcher(collection, steps);
+    startWatcher();
+    onUnmounted(() => stopWatcher());
 
     // Load the file details and existing action states
     api.getCollection(props.sessionId).then(async (c) => {
@@ -360,7 +365,10 @@ export default defineComponent({
     rowClass(step: Step) {
       return {
         'selection-disabled': step.fixedSelected !== undefined,
-        'expander-disabled': !step.lastAction?.resultFiles && !step.result && !step.downloadUrl,
+        // The API may already set a value for resultFiles while still running
+        'expander-disabled':
+          step.status === 'Executing' ||
+          (!step.lastAction?.resultFiles && !step.result && !step.downloadUrl),
       };
     },
 

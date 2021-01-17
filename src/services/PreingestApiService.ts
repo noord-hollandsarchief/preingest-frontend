@@ -14,7 +14,6 @@
 // See https://github.com/primefaces/primevue/issues/813
 import { useToast } from 'primevue/components/toast/useToast';
 import { DependentItem } from '@/utils/dependentList';
-import { formatDateDifference } from '@/utils/formatters';
 import dayjs from 'dayjs';
 
 export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
@@ -49,6 +48,40 @@ export type ActionSummary = {
  *
  * Note that a single Action can occur more than once in the API responses, if executed multiple
  * times for a single Step, or if multiple Steps use the same action with different parameters.
+ *
+ * Also beware that the server time and browser time may not be exact, and even the timestamps in
+ * `summary` and `states` may differ a bit:
+ *
+ * ```json
+ * {
+ *   "actionStatus": "Success",
+ *   "creation": "2021-01-17T19:26:59.4226082+00:00",
+ *   "description": "Container file 4e70c523-63f9-5940-90fb-bcacc4fc37b3.tar.gz",
+ *   "folderSessionId": "b56f1128-df58-7d5f-988a-9ec48c559257",
+ *   "name": "ContainerChecksumHandler",
+ *   "processId": "e7920e0b-95c8-4b94-bc95-dc0c0bf6748d",
+ *   "resultFiles": "ContainerChecksumHandler.json",
+ *   "summary": {
+ *     "processed": 1,
+ *     "accepted": 1,
+ *     "rejected": 0,
+ *     "start": "2021-01-17T19:26:59.5031101+00:00",
+ *     "end": "2021-01-17T19:26:59.9968424+00:00"
+ *   },
+ *   "states": [
+ *     {
+ *       "statusId": "6c905b16-a8e8-4ba1-a17c-ebd7d58f160c",
+ *       "name": "Started",
+ *       "creation": "2021-01-17T19:26:59.6090829+00:00"
+ *     },
+ *     {
+ *       "statusId": "c6d1976b-0f1b-4941-8e75-19a38181ac8a",
+ *       "name": "Completed",
+ *       "creation": "2021-01-17T19:27:00.057838+00:00"
+ *     }
+ *   ]
+ * }
+ * ```
  */
 export type Action = {
   // The status of the actual execution, but not (yet) including `Waiting`
@@ -92,6 +125,7 @@ export type Step = DependentItem & {
   // The status as shown in the frontend, including `Waiting` or no status at all
   status?: ActionStatus;
   lastAction?: Action;
+  lastTriggerActionResult?: TriggerActionResult;
   lastStart?: string;
   lastDuration?: string;
   // The initial or current selection state
@@ -252,9 +286,10 @@ export class PreingestApiService {
   private delay = (timeout: number) => new Promise((res) => setTimeout(res, timeout));
 
   // TODO Increase default timeout in .env?
+  // TODO Remove timeout altogether?
   private async repeatUntilResult<T>(
     fn: () => Promise<T | undefined>,
-    maxSeconds = process.env.VUE_APP_POLL_MAX_SECONDS
+    maxSeconds = process.env.VUE_APP_STEP_MAX_SECONDS
   ): Promise<T> {
     const startTime = dayjs();
     const endTime = startTime.add(maxSeconds, 's');
@@ -262,7 +297,7 @@ export class PreingestApiService {
     while (dayjs().isBefore(endTime)) {
       if (tries > 0) {
         // To easily show the elapsed time, we cannot use some, e.g., exponential backoff
-        await this.delay(750);
+        await this.delay(500);
       }
       tries++;
       try {
@@ -324,7 +359,8 @@ export class PreingestApiService {
   };
 
   /**
-   * Send an API command to trigger the Action for a Step, and poll for its (new) results.
+   * Send an API command to trigger the Action for a Step, and poll for its (new) results. This
+   * needs {@link useCollectionStatusWatcher} to be running.
    */
   triggerStepAndWaitForCompleted = async (
     sessionId: string,
@@ -340,31 +376,22 @@ export class PreingestApiService {
 
     // TODO API is an action always accepted?
 
-    // TODO maybe these also need to be cleared when using custom triggerFn?
     step.result = undefined;
     step.lastAction = undefined;
     step.lastStart = dayjs().toISOString();
+    // This is also used by useCollectionStatusWatcher to recognize the new results for restarts
+    step.lastTriggerActionResult = triggerResult;
 
-    // TODO maybe delay just a bit here?
     return this.repeatUntilResult(async () => {
-      // Compute duration up to now
-      step.lastDuration = formatDateDifference(step.lastStart || '');
-
-      // We could also only get `status/result/${triggerResult.actionId}` but then we'd need to
-      // derive the last status ourselves. So just get the full collection.
-      const collection = await this.getCollection(sessionId);
-      const lastResult = collection.preingest.find(
-        (action) => action.processId === triggerResult.actionId
-      );
-
-      step.lastAction = lastResult;
-
-      // When completed at this point, we could copy the summary's start time into action.lastStart,
-      // and even calculate a more precise duration using the summary's start and end, but that may
-      // also round down a second, which is just confusing.
-
-      // Return a result when done, or undefined to repeat
-      return lastResult?.actionStatus === 'Executing' ? undefined : lastResult?.actionStatus;
+      // Assume `useCollectionStatusWatcher` is running, which will update `lastAction` if it
+      // matches the expected `lastTriggerActionResult.actionId`
+      if (step.lastAction && step.lastAction.actionStatus !== 'Executing') {
+        step.lastTriggerActionResult = undefined;
+        // Done
+        return step.lastAction?.actionStatus;
+      }
+      // Repeat
+      return undefined;
     });
   };
 

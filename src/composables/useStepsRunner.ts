@@ -28,6 +28,7 @@ export function useStepsRunner(collection: Ref<Collection | undefined>, steps: R
       if (step.status === 'Wait') {
         step.status = 'Executing';
         try {
+          // Success, Error or Failed
           step.status = await (step.triggerFn
             ? step.triggerFn(step)
             : api.triggerStepAndWaitForCompleted(collection.value.sessionId, step));
@@ -37,6 +38,7 @@ export function useStepsRunner(collection: Ref<Collection | undefined>, steps: R
             summary: 'Mislukt',
             detail: e,
           });
+          // Let onStepComplete decide what to do
           step.status = 'Failed';
         }
         if (onStepComplete) {
