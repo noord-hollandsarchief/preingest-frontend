@@ -181,25 +181,25 @@ export const stepDefinitions: Step[] = [
   {
     id: 'profiling',
     dependsOn: ['unpack'],
-    actionName: 'Droid - Profiling',
+    actionName: 'ProfilesHandler - Droid Profiling',
     description: 'DROID bestandsclassificatie voorbereiden',
   },
   {
     id: 'exporting',
     dependsOn: ['profiling'],
-    actionName: 'Droid - CSV report',
+    actionName: 'ExportingHandler - Droid CSV report',
     description: 'DROID metagegevens exporteren naar CSV',
   },
   {
     id: 'reporting/pdf',
     dependsOn: ['profiling'],
-    actionName: 'Droid - PDF report',
+    actionName: 'ReportingHandler - Droid PDF report',
     description: 'DROID metagegevens exporteren naar PDF',
   },
   {
     id: 'reporting/planets',
     dependsOn: ['profiling'],
-    actionName: 'Droid - Planets XML report',
+    actionName: 'ReportingHandler - Planets XML report',
     description: 'DROID metagegevens exporteren naar XML',
   },
   {
