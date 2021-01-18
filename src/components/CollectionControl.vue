@@ -143,8 +143,8 @@
         </Column>
 
         <template #expansion="slotProps">
-          <div class="pre">{{ slotProps.data.result }}</div>
           <a v-if="slotProps.data.downloadUrl" :href="slotProps.data.downloadUrl">Download</a>
+          <div class="pre">{{ slotProps.data.result }}</div>
         </template>
       </DataTable>
     </div>
@@ -348,16 +348,17 @@ export default defineComponent({
       const step = event.data;
       // We may already have loaded the result/link earlier
       if (this.collection && step.lastAction && !step.result && !step.downloadUrl) {
-        if (step.lastAction.resultFiles.endsWith('.json')) {
-          step.result = await this.api.getActionResult(
-            this.collection.sessionId,
-            step.lastAction.resultFiles
-          );
-        } else {
-          step.downloadUrl = this.api.getActionReportUrl(
-            this.collection.sessionId,
-            step.lastAction.resultFiles
-          );
+        // Assume at most one JSON result and one download link
+        const resultFiles = Array.isArray(step.lastAction.resultFiles)
+          ? step.lastAction.resultFiles
+          : step.lastAction.resultFiles.split(';');
+
+        for (const resultFile of resultFiles) {
+          if (resultFile.endsWith('.json')) {
+            step.result = await this.api.getActionResult(this.collection.sessionId, resultFile);
+          } else {
+            step.downloadUrl = this.api.getActionReportUrl(this.collection.sessionId, resultFile);
+          }
         }
       }
     },
