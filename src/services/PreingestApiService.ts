@@ -377,6 +377,7 @@ export class PreingestApiService {
     // TODO API is an action always accepted?
 
     step.result = undefined;
+    step.downloadUrl = undefined;
     step.lastAction = undefined;
     step.lastStart = dayjs().toISOString();
     // This is also used by useCollectionStatusWatcher to recognize the new results for restarts
