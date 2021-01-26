@@ -9,43 +9,67 @@
           <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
           <!-- TODO SHA-512 is far too long to display -->
           <p>Checksum: {{ collection.calculatedChecksum ?? 'niet berekend' }}</p>
-          <div class="p-fluid p-formgrid p-grid">
+          <!-- Somehow @change or @input from Dropdown does not bubble up here -->
+          <div class="p-fluid p-formgrid p-grid" @input="settingsDirty = true">
+            <div class="p-field p-col-12">
+              <label for="description">Omschrijving</label>
+              <Textarea
+                id="description"
+                v-model="collection.settings.description"
+                rows="1"
+                :autoResize="true"
+              />
+            </div>
             <div class="p-field p-col-12 p-md-3">
               <label for="checksumType">Type checksum</label>
               <Dropdown
                 id="checksumType"
-                v-model="collection.checksumType"
+                v-model="collection.settings.checksumType"
                 :options="checksumTypes"
                 optionLabel="name"
                 optionValue="code"
                 placeholder="Maak een keuze"
+                @change="settingsDirty = true"
               />
             </div>
             <div class="p-field p-col-12 p-md-9">
               <label for="expectedChecksum">Opgegeven checksum</label>
               <InputText
                 id="expectedChecksum"
-                v-model="collection.expectedChecksum"
+                v-model="collection.settings.checksumValue"
                 type="text"
                 placeholder="De checksum van de zorgdrager"
               />
             </div>
-            <div class="p-field p-col-12">
-              <label for="greenlist">Greenlist</label>
-              <!-- TODO the actual types would need to be far more specific? -->
-              <Chips
-                v-model="collection.greenlist"
-                separator=","
-                id="greenlist"
-                placeholder="Toegestane documenttypes, kommagescheiden: doc,xls,pdf"
+            <div class="p-field p-col-12 p-md-3">
+              <label for="preservicaSecurityTag">Preservica security</label>
+              <Dropdown
+                id="preservicaSecurityTag"
+                v-model="collection.settings.preservicaSecurityTag"
+                :options="securityTagTypes"
+                optionLabel="name"
+                optionValue="code"
+                placeholder="Maak een keuze"
+                @change="settingsDirty = true"
               />
             </div>
-            <div class="p-field p-col-12">
-              <label for="description">Omschrijving</label>
-              <Textarea id="description" rows="2" :autoResize="true" />
+            <div class="p-field p-col-12 p-md-9">
+              <label for="preservicaTarget">Preservica doellocatie</label>
+              <InputText
+                id="preservicaTarget"
+                v-model="collection.settings.preservicaTarget"
+                type="text"
+                placeholder="Optionele GUID van locatie in Preservica"
+              />
             </div>
           </div>
-          <Button label="Opslaan" icon="pi pi-save" class="p-button-success p-mr-2" @click="save" />
+          <Button
+            label="Opslaan"
+            icon="pi pi-save"
+            class="p-button-success p-mr-2"
+            :disabled="settingsDirty ? null : 'disabled'"
+            @click="save"
+          />
         </div>
       </div>
     </div>
@@ -164,6 +188,8 @@ import {
   Step,
   checksumTypes,
   stepDefinitions,
+  securityTagTypes,
+  Settings,
 } from '@/services/PreingestApiService';
 import { getDependencies, getDependents } from '@/utils/dependentList';
 import { formatDateDifference, formatDateString, formatFileSize } from '@/utils/formatters';
@@ -193,6 +219,10 @@ export default defineComponent({
     const collection = ref<Collection | undefined>();
     const selectedSteps = ref<Step[]>([]);
 
+    // TODO move settings into their own component that cannot have settings be null, making watching possible
+    // TODO add dirty warning on navigation
+    const settingsDirty = ref(false);
+
     const notImplemented = () => {
       toast.add({
         severity: 'error',
@@ -211,7 +241,7 @@ export default defineComponent({
       const actionStatus = await api.triggerStepAndWaitForCompleted(
         encodeURIComponent(collection.value?.sessionId),
         action,
-        collection.value.checksumType || 'SHA1'
+        collection.value.settings?.checksumType || 'SHA1'
       );
 
       // TODO Maybe change triggerStepAndWaitForCompleted to return the result on success
@@ -247,9 +277,6 @@ export default defineComponent({
     api.getCollection(props.sessionId).then(async (c) => {
       collection.value = c;
 
-      // The fetched collection only knows the executed Actions, not all available Steps, and may
-      // include the same Action multiple times. Merge the collection's Actions into the Steps.
-
       // TODO similar code in SessionProgress.vue
       for (const step of steps.value) {
         const lastAction = collection.value?.preingest
@@ -283,6 +310,7 @@ export default defineComponent({
     return {
       api,
       checksumTypes,
+      securityTagTypes,
       formatDateString,
       formatFileSize,
       confirm,
@@ -292,6 +320,7 @@ export default defineComponent({
       steps,
       selectedSteps,
       collection,
+      settingsDirty,
       runWaitingSteps,
     };
   },
@@ -374,8 +403,10 @@ export default defineComponent({
     },
 
     save() {
-      // TODO Save file properties
-      this.notImplemented();
+      if (this.collection?.settings) {
+        this.api.saveSettings(this.collection.sessionId, this.collection.settings);
+        this.settingsDirty = false;
+      }
     },
 
     runActions() {

@@ -30,6 +30,13 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
   { name: 'SHA-512', code: 'SHA512' },
 ];
 
+export type SecurityTag = 'open' | 'closed';
+
+export const securityTagTypes: { name: string; code: SecurityTag }[] = [
+  { name: 'Open', code: 'open' },
+  { name: 'Besloten', code: 'closed' },
+];
+
 // `Wait` is currently only known in the frontend, which controls the queue, but that will change.
 // In the future this will also need some "Ready for ingest" and "Done" states.
 export type ActionStatus = 'Wait' | 'Executing' | 'Success' | 'Error' | 'Failed';
@@ -244,6 +251,14 @@ export const stepDefinitions: Step[] = [
   },
 ];
 
+export type Settings = {
+  description?: string;
+  checksumType?: ChecksumType;
+  checksumValue?: string;
+  preservicaTarget?: string;
+  preservicaSecurityTag?: string;
+};
+
 export type Collection = {
   // The file name
   name: string;
@@ -255,11 +270,8 @@ export type Collection = {
   preingest: Action[];
   // The following attributes are not (yet) fetched from the API, but populated in the frontend
   calculatedChecksum?: string;
-  // TODO Add to API
-  checksumType?: ChecksumType;
-  expectedChecksum?: string;
-  description?: string;
-  greenlist?: string;
+  // This may be null in the API response (though that is fixed after fetching)
+  settings?: Settings;
 };
 
 export type TriggerActionResult = {
@@ -328,7 +340,8 @@ export class PreingestApiService {
       throw new Error('No such session ' + sessionId);
     }
 
-    return collection;
+    // The API may return `"settings": null` but the forms expect an object
+    return { ...collection, settings: collection.settings ?? {} };
   };
 
   // UnpackTarHandler.json and so on.
@@ -396,9 +409,17 @@ export class PreingestApiService {
     });
   };
 
+  saveSettings = async (sessionId: string, settings: Settings): Promise<TriggerActionResult> => {
+    return await this.fetchWithDefaults<TriggerActionResult>(`preingest/settings/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  };
+
   private fetchWithDefaults = async <T>(path: string, init?: RequestInit): Promise<T> => {
     const defaults = {
       headers: {
+        'Content-Type': 'application/json',
         Accept: 'application/json',
       },
     };
