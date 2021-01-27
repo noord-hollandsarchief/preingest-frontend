@@ -239,7 +239,7 @@ export const stepDefinitions: Step[] = [
   {
     id: 'sipcreator',
     dependsOn: ['transform'],
-    actionName: 'TransformationHandler',
+    actionName: 'SipCreatorHandler',
     description: 'Bestanden omzetten naar SIP bestandsformaat',
   },
   {
