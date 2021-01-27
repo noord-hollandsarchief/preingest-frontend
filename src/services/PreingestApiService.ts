@@ -237,10 +237,9 @@ export const stepDefinitions: Step[] = [
       'Dit verandert de mapinhoud, dus heeft effect op de controle van de greenlist als die pas later wordt uitgevoerd',
   },
   {
-    id: 'sip',
+    id: 'sipcreator',
     dependsOn: ['transform'],
-    // TODO API validate name when API supports this
-    actionName: 'TODO SIP',
+    actionName: 'TransformationHandler',
     description: 'Bestanden omzetten naar SIP bestandsformaat',
   },
   {
