@@ -1,61 +1,35 @@
 import { Ref } from 'vue';
-import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
 import { Collection, Step } from '@/services/PreingestApiService';
 
-/**
- * Callback as invoked after each action, allowing the caller to do some housekeeping or even abort
- * further processing.
- *
- * @return `false` to abort, `true` to continue with the next waiting action
- */
-type StepCompleteFn = (action: Step) => boolean;
-
 export function useStepsRunner(collection: Ref<Collection | undefined>, steps: Ref<Step[]>) {
   const api = useApi();
-  const toast = useToast();
 
   /**
-   * Run the steps that have status `wait` due to some user selection.
+   * Run the steps that have been selected by the user.
+   *
+   * Any parameters should already have been set using {@link saveSettings}.
    */
-  const runWaitingSteps = async (onStepComplete?: StepCompleteFn) => {
+  const runSelectedSteps = async () => {
     if (!collection.value) {
       return;
     }
 
-    // Simply run in the given order, one by one
-    for (const step of steps.value) {
-      if (step.status === 'Wait') {
-        step.status = 'Executing';
-        try {
-          // Success, Error or Failed
-          step.status = await (step.triggerFn
-            ? step.triggerFn(step)
-            : api.triggerStepAndWaitForCompleted(collection.value.sessionId, step));
-        } catch (e) {
-          toast.add({
-            severity: 'error',
-            summary: 'Mislukt',
-            detail: e,
-          });
-          // Let onStepComplete decide what to do
-          step.status = 'Failed';
-        }
-        if (onStepComplete) {
-          if (!onStepComplete(step)) {
-            toast.add({
-              severity: 'error',
-              summary: 'Onverwachte fout bij uitvoering',
-              detail: 'Verdere verwerking is afgebroken.',
-            });
-            return;
-          }
-        }
-      }
+    // Simply schedule in the given order, one by one.
+    const workflowSteps = steps.value
+      .filter((step) => step.selected)
+      .map((step) => ({
+        actionName: step.actionName,
+        continueOnError: true,
+        continueOnFailed: false,
+      }));
+
+    if (workflowSteps.length) {
+      await api.startExecutionPlan(collection.value?.sessionId, { workflow: workflowSteps });
     }
   };
 
   return {
-    runWaitingSteps,
+    runSelectedSteps,
   };
 }

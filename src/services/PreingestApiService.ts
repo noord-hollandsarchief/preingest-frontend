@@ -14,7 +14,6 @@
 // See https://github.com/primefaces/primevue/issues/813
 import { useToast } from 'primevue/components/toast/useToast';
 import { DependentItem } from '@/utils/dependentList';
-import dayjs from 'dayjs';
 
 export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
 export type JsonMap = { [key: string]: AnyJson };
@@ -37,9 +36,10 @@ export const securityTagTypes: { name: string; code: SecurityTag }[] = [
   { name: 'Besloten', code: 'closed' },
 ];
 
-// `Wait` is currently only known in the frontend, which controls the queue, but that will change.
-// In the future this will also need some "Ready for ingest" and "Done" states.
-export type ActionStatus = 'Wait' | 'Executing' | 'Success' | 'Error' | 'Failed';
+// In the future this may also need some "Ready for ingest" and "Done" states.
+export type OverallStatus = 'New' | 'Running' | 'Success' | 'Error' | 'Failed';
+export type ActionStatus = 'Executing' | 'Success' | 'Error' | 'Failed';
+export type WorkflowItemStatus = 'Pending' | 'Executing' | 'Done';
 
 export type ActionSummary = {
   processed: number;
@@ -121,18 +121,12 @@ export type Step = DependentItem & {
   info?: string;
   // The HTTP method, default POST
   method?: string;
-  /**
-   * A custom function to trigger an action; if not set then {@link triggerStepAndWaitForCompleted}
-   * is used.
-   */
-  triggerFn?: (step: Step) => Promise<ActionStatus>;
   allowRestart?: boolean;
 
   // Transient details.
-  // The status as shown in the frontend, including `Waiting` or no status at all
-  status?: ActionStatus;
+  // The status as shown in the frontend, which may be no status at all
+  status?: ActionStatus | WorkflowItemStatus;
   lastAction?: Action;
-  lastTriggerActionResult?: TriggerActionResult;
   lastStart?: string;
   lastDuration?: string;
   // The initial or current selection state
@@ -147,8 +141,8 @@ export type Step = DependentItem & {
 };
 
 /**
- * The Steps used in this frontend. The `id` must match the URL path, like `virusscan` in
- * `/preingest/virusscan/:guid` and like `reporting/pdf` for `/preingest/reporting/:type/:guid`
+ * The Steps used in this frontend.
+ *
  * The `actionName` must match the name in the status results, like `UnpackTarHandler` and `Droid - PDF report`.
  */
 export const stepDefinitions: Step[] = [
@@ -188,25 +182,31 @@ export const stepDefinitions: Step[] = [
   {
     id: 'profiling',
     dependsOn: ['unpack'],
-    actionName: 'ProfilesHandler - Droid Profiling',
+    // TODO Do we still need the old name in the action results?
+    // actionName: 'ProfilesHandler - Droid Profiling',
+    actionName: 'ProfilesHandler',
     description: 'DROID bestandsclassificatie voorbereiden',
   },
   {
     id: 'exporting',
     dependsOn: ['profiling'],
-    actionName: 'ExportingHandler - Droid CSV report',
+    // actionName: 'ExportingHandler - Droid CSV report',
+    actionName: 'ExportingHandler',
     description: 'DROID metagegevens exporteren naar CSV',
   },
   {
     id: 'reporting/pdf',
     dependsOn: ['profiling'],
-    actionName: 'ReportingHandler - Droid PDF report',
+    // actionName: 'ReportingHandler - Droid PDF report',
+    actionName: 'ReportingPdfHandler',
     description: 'DROID metagegevens exporteren naar PDF',
   },
   {
     id: 'reporting/planets',
     dependsOn: ['profiling'],
-    actionName: 'ReportingHandler - Planets XML report',
+    // actionName: 'ReportingDroidXmlHandler - Droid XML report',
+    // TODO There is also some ReportingDroidXmlHandler :-(
+    actionName: 'ReportingPlanetsXmlHandler',
     description: 'DROID metagegevens exporteren naar XML',
   },
   {
@@ -258,6 +258,17 @@ export type Settings = {
   preservicaSecurityTag?: string;
 };
 
+export type WorkflowItem = {
+  status?: WorkflowItemStatus;
+  actionName: string;
+  continueOnError: boolean;
+  continueOnFailed: boolean;
+};
+
+export type ExecutionPlan = {
+  workflow: WorkflowItem[];
+};
+
 export type Collection = {
   // The file name
   name: string;
@@ -265,12 +276,13 @@ export type Collection = {
   sessionId: string;
   creationTime: string;
   size: number;
-  overallStatus: ActionStatus;
+  overallStatus: OverallStatus;
   preingest: Action[];
   // The following attributes are not (yet) fetched from the API, but populated in the frontend
   calculatedChecksum?: string;
   // This may be null in the API response (though that is fixed after fetching)
   settings?: Settings;
+  scheduledPlan?: WorkflowItem[];
 };
 
 export type TriggerActionResult = {
@@ -295,33 +307,6 @@ export class PreingestApiService {
   private toast = useToast();
   private baseUrl = process.env.VUE_APP_PREINGEST_API;
   private delay = (timeout: number) => new Promise((res) => setTimeout(res, timeout));
-
-  // TODO Increase default timeout in .env?
-  // TODO Remove timeout altogether?
-  private async repeatUntilResult<T>(
-    fn: () => Promise<T | undefined>,
-    maxSeconds = process.env.VUE_APP_STEP_MAX_SECONDS
-  ): Promise<T> {
-    const startTime = dayjs();
-    const endTime = startTime.add(maxSeconds, 's');
-    let tries = 0;
-    while (dayjs().isBefore(endTime)) {
-      if (tries > 0) {
-        // To easily show the elapsed time, we cannot use some, e.g., exponential backoff
-        await this.delay(500);
-      }
-      tries++;
-      try {
-        const result = await fn();
-        if (result) {
-          return result;
-        }
-      } catch (e) {
-        // If important, then this should already have been reported by whatever function we invoked
-      }
-    }
-    throw `Geen resultaat na ${tries} pogingen in ${dayjs().diff(startTime, 'm')} minuten.`;
-  }
 
   getCollections = async (): Promise<Collection[]> => {
     return this.fetchWithDefaults('output/collections');
@@ -370,48 +355,46 @@ export class PreingestApiService {
     }
   };
 
-  /**
-   * Send an API command to trigger the Action for a Step, and poll for its (new) results. This
-   * needs {@link useCollectionStatusWatcher} to be running.
-   */
-  triggerStepAndWaitForCompleted = async (
-    sessionId: string,
-    step: Step,
-    actionSuffix = ''
-  ): Promise<ActionStatus> => {
-    const triggerResult = await this.fetchWithDefaults<TriggerActionResult>(
-      `preingest/${step.id}${actionSuffix ? '/' + actionSuffix : ''}/${sessionId}`,
-      {
-        method: step.method || 'POST',
-      }
-    );
-
-    // TODO API is an action always accepted?
-
-    step.result = undefined;
-    step.downloadUrl = undefined;
-    step.lastAction = undefined;
-    step.lastStart = dayjs().toISOString();
-    // This is also used by useCollectionStatusWatcher to recognize the new results for restarts
-    step.lastTriggerActionResult = triggerResult;
-
-    return this.repeatUntilResult(async () => {
-      // Assume `useCollectionStatusWatcher` is running, which will update `lastAction` if it
-      // matches the expected `lastTriggerActionResult.actionId`
-      if (step.lastAction && step.lastAction.actionStatus !== 'Executing') {
-        step.lastTriggerActionResult = undefined;
-        // Done
-        return step.lastAction?.actionStatus;
-      }
-      // Repeat
-      return undefined;
-    });
-  };
-
   saveSettings = async (sessionId: string, settings: Settings): Promise<TriggerActionResult> => {
     return await this.fetchWithDefaults<TriggerActionResult>(`preingest/settings/${sessionId}`, {
       method: 'PUT',
       body: JSON.stringify(settings),
+    });
+  };
+
+  resetSession = async (sessionId: string): Promise<void> => {
+    // TODO API should wipe details from Plan table
+    await this.cancelExecutionPlan(sessionId);
+
+    await this.fetchWithDefaults<TriggerActionResult>(`Status/reset/${sessionId}`, {
+      method: 'DELETE',
+    });
+
+    await this.delay(1000);
+    // Recreate the session folder (and any other missing session folder)
+    await this.getCollections();
+  };
+
+  /**
+   * Schedule the execution of the given actions, wiping any existing or completed plan. Any
+   * parameters should already have been set using {@link saveSettings}.
+   */
+  startExecutionPlan = async (
+    sessionId: string,
+    executionPlan: ExecutionPlan
+  ): Promise<TriggerActionResult> => {
+    // The startplan endpoint will silently ignore any new plan if a (completed) plan exists
+    await this.cancelExecutionPlan(sessionId);
+
+    return this.fetchWithDefaults<TriggerActionResult>(`Service/startplan/${sessionId}`, {
+      method: 'POST',
+      body: JSON.stringify(executionPlan),
+    });
+  };
+
+  cancelExecutionPlan = async (sessionId: string): Promise<void> => {
+    await this.fetchWithDefaults<TriggerActionResult>(`Service/cancelplan/${sessionId}`, {
+      method: 'DELETE',
     });
   };
 

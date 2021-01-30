@@ -1,4 +1,5 @@
 import { Ref } from 'vue';
+import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
 import { Collection, Step } from '@/services/PreingestApiService';
 import { formatDateDifference } from '@/utils/formatters';
@@ -11,6 +12,7 @@ export function useCollectionStatusWatcher(
   steps: Ref<Step[]>
 ) {
   const api = useApi();
+  const toast = useToast();
   let running = false;
   let lastPoll = 0;
   let cached: Collection | undefined = undefined;
@@ -38,32 +40,64 @@ export function useCollectionStatusWatcher(
     }
 
     // TODO similar code in SessionProgress.vue and CollectionControl
-    // The fetched collection only knows about executed Actions, not all available Steps, and may
-    // include the same Action multiple times; merge the collection's Actions into the Steps
+    // The fetched collection only knows about the current execution plan (if any) and all executed
+    // Actions, not all available Steps. Also, it may include the same action multiple times; merge
+    // the collection's Actions into the Steps
     for (const step of steps.value) {
       // TODO API is this indeed sorted?
       const lastAction = cached?.preingest
         ?.filter((action) => action.name === step.actionName)
         .pop();
 
-      // If a step has just been restarted (for which the application in this browser window will
-      // have set `step.lastStart`, and will have cleared `step.lastTriggerActionResult` and
-      // `step.lastAction`), even fresh API details may refer to a previous invocation; compare the
-      // expected `actionId` if applicable:
+      const scheduledAction = cached?.scheduledPlan?.find(
+        (scheduled) => scheduled.actionName === step.actionName
+      );
+
+      // TODO For checksum, copy the result
+      // collection.value.calculatedChecksum = ...
+
+      // TODO Clear the checkbox when completed
+
+      // If any scheduled step reports Done while its action reports Failed, then the execution
+      // plan will stop, possibly leaving items in Pending state. We could wipe the execution plan,
+      // but that would only happen then when the failure happens while the detail page is open.
       if (
-        lastAction &&
-        (!step.lastTriggerActionResult ||
-          step.lastTriggerActionResult.actionId === lastAction.processId)
+        scheduledAction?.status === 'Done' &&
+        lastAction?.actionStatus === 'Failed' &&
+        step.status !== 'Failed'
       ) {
-        step.status = step.status === 'Wait' ? step.status : lastAction?.actionStatus;
-        step.lastAction = lastAction;
-        step.lastStart = lastAction.summary?.start || step.lastStart;
-        // When completed at this point, this may round down a second, which is a bit confusing
-        step.lastDuration = formatDateDifference(step.lastStart || '', lastAction.summary?.end);
-      } else {
-        // Always update the duration
-        step.lastDuration = step.lastStart ? formatDateDifference(step.lastStart) : undefined;
+        toast.add({
+          severity: 'error',
+          summary: 'Onverwachte fout bij uitvoering',
+          detail: 'Verdere verwerking is afgebroken.',
+        });
       }
+
+      // TODO remove reference to step.lastStart and all else from the comment below
+      // // If a step has just been restarted (for which the application in this browser window will
+      // // have set `step.lastStart`, and will have cleared `step.lastTriggerActionResult` and
+      // // `step.lastAction`), even fresh API details may refer to a previous invocation; compare the
+      // // expected `actionId` if applicable:
+      // if (
+      //   lastAction &&
+      //   (!step.lastTriggerActionResult ||
+      //     step.lastTriggerActionResult.actionId === lastAction.processId)
+      // ) {
+      //         // The server does not know about 'Wait', so for actions that are restarted we
+      //         // step.status = step.status === 'Wait' ? step.status : lastAction?.actionStatus;
+
+      // Copy Pending and Executing from the scheduled plan, or the last result otherwise
+      step.status =
+        scheduledAction?.status && scheduledAction.status !== 'Done'
+          ? scheduledAction.status
+          : lastAction?.actionStatus;
+      step.lastAction = lastAction;
+      step.lastStart = lastAction?.summary?.start || lastAction?.creation || step.lastStart;
+      // TODO validate comment and improve calculation if possible
+      // When completed at this point, this may round down a second, which is a bit confusing
+      step.lastDuration = step.lastStart
+        ? formatDateDifference(step.lastStart, lastAction?.summary?.end)
+        : undefined;
     }
   };
 

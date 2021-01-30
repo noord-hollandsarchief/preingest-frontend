@@ -84,7 +84,7 @@
             label="Start"
             icon="pi pi-play"
             class="p-button-success p-mr-2"
-            @click="runActions"
+            @click="runSelectedSteps"
           />
         </template>
 
@@ -148,7 +148,7 @@
           bodyClass="p-text-center"
         >
           <template #body="slotProps">
-            <Tag v-if="slotProps.data.status === 'Wait'" severity="info">wachtrij</Tag>
+            <Tag v-if="slotProps.data.status === 'Pending'" severity="info">wachtrij</Tag>
             <Tag v-else-if="slotProps.data.status === 'Executing'" severity="warning">bezig</Tag>
             <Tag v-else-if="slotProps.data.status === 'Success'" severity="success">gereed</Tag>
             <Tag
@@ -183,13 +183,11 @@ import { useApi } from '@/plugins/PreingestApi';
 import { useCollectionStatusWatcher } from '@/composables/useCollectionStatusWatcher';
 import { useStepsRunner } from '@/composables/useStepsRunner';
 import {
-  ActionStatus,
   Collection,
   Step,
   checksumTypes,
   stepDefinitions,
   securityTagTypes,
-  Settings,
 } from '@/services/PreingestApiService';
 import { getDependencies, getDependents } from '@/utils/dependentList';
 import { formatDateDifference, formatDateString, formatFileSize } from '@/utils/formatters';
@@ -231,29 +229,11 @@ export default defineComponent({
       });
     };
 
-    // A custom action, to copy the result into the file detail overview
-    const calculateChecksum = async (action: Step): Promise<ActionStatus> => {
-      if (!collection.value) {
-        throw Error('Programming error: no sessionId');
-      }
-
-      // TODO enforce user choice rather than using default
-      const actionStatus = await api.triggerStepAndWaitForCompleted(
-        encodeURIComponent(collection.value?.sessionId),
-        action,
-        collection.value.settings?.checksumType || 'SHA1'
-      );
-
-      // TODO Maybe change triggerStepAndWaitForCompleted to return the result on success
-      collection.value.calculatedChecksum = await api.getLastCalculatedChecksum(collection.value);
-
-      return actionStatus;
-    };
-
     // Action(s) that allow for special handling in the frontend
     const extendedSteps: Partial<Step>[] = [
-      { id: 'calculate', allowRestart: true, triggerFn: calculateChecksum },
+      { id: 'calculate', allowRestart: true },
       { id: 'virusscan', allowRestart: true },
+      { id: 'sipcreator', allowRestart: true },
       { id: 'excelcreator', allowRestart: true },
     ];
 
@@ -267,7 +247,7 @@ export default defineComponent({
     steps.value.forEach((step) => (step.selected = step.fixedSelected ?? step.selected));
     selectedSteps.value = steps.value.filter((step) => step.selected);
 
-    const { runWaitingSteps } = useStepsRunner(collection, steps);
+    const { runSelectedSteps } = useStepsRunner(collection, steps);
 
     const { startWatcher, stopWatcher } = useCollectionStatusWatcher(collection, steps);
     startWatcher();
@@ -282,7 +262,7 @@ export default defineComponent({
         const lastAction = collection.value?.preingest
           ?.filter((action) => action.name === step.actionName)
           .pop();
-        step.status = step.status === 'Wait' ? step.status : lastAction?.actionStatus;
+        step.status = lastAction?.actionStatus;
 
         if (lastAction) {
           step.lastAction = lastAction;
@@ -321,7 +301,7 @@ export default defineComponent({
       selectedSteps,
       collection,
       settingsDirty,
-      runWaitingSteps,
+      runSelectedSteps,
     };
   },
   computed: {
@@ -342,12 +322,6 @@ export default defineComponent({
 
       this.steps.forEach((step: Step) => {
         step.selected = step.fixedSelected ?? inSelected(step);
-        // If `selectedSteps` is changed while running the selected steps, then this watcher may be
-        // invoked after a next step's state was already set to `running`. Make sure not to set it
-        // back to `waiting`.
-        if (step.status !== 'Executing') {
-          step.status = step.selected ? 'Wait' : step.lastAction?.actionStatus;
-        }
       });
 
       // To avoid endless recursive updates, only change `selectedSteps` if needed
@@ -407,22 +381,6 @@ export default defineComponent({
         this.api.saveSettings(this.collection.sessionId, this.collection.settings);
         this.settingsDirty = false;
       }
-    },
-
-    runActions() {
-      // TODO lock UI
-      this.runWaitingSteps((step: Step) => {
-        if (step.status !== 'Failed') {
-          step.selected = false;
-          this.selectedSteps = this.selectedSteps.filter((s) => s.id !== step.id);
-          if (step.status === 'Success') {
-            // Fix the state to not-selected (unless this step allows for restarting)
-            step.fixedSelected = step.allowRestart ? step.fixedSelected : false;
-          }
-        }
-        // Abort if something failed (but not in case an error was found)
-        return step.status !== 'Failed';
-      });
     },
 
     runIngest() {
