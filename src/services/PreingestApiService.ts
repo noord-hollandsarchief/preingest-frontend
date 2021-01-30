@@ -447,8 +447,8 @@ export class PreingestApiService {
         severity: 'error',
         // HTTP/2 connections do not support res.statusText
         // See also https://fetch.spec.whatwg.org/#concept-response-status-message
-        summary: `Error ${res.status}`,
-        detail: (await res.text()) || path,
+        summary: `Error ${res.status} for ${path}`,
+        detail: await res.text(),
         // Set some max lifetime, as very wide error messages may hide the toast's close button
         life: 10000,
       });
@@ -456,6 +456,19 @@ export class PreingestApiService {
       throw new Error(res.statusText);
     }
 
-    return await res.json();
+    // The API may return 200 OK along with Content-Length: 0 (rather than 204 No Content)
+    return res.headers.get('Content-Length') === '0'
+      ? undefined
+      : await res.json().catch((reason) => {
+          this.toast.add({
+            severity: 'error',
+            summary: `Failed to parse response for ${path}`,
+            detail: reason,
+            // Set some max lifetime, as very wide error messages may hide the toast's close button
+            life: 10000,
+          });
+          console.error(reason);
+          throw new Error(`Failed to parse response for ${path}`);
+        });
   };
 }
