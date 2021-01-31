@@ -15,7 +15,6 @@ export function useCollectionStatusWatcher(
   const toast = useToast();
   let running = false;
   let lastPoll = 0;
-  let cached: Collection | undefined = undefined;
 
   /**
    * Update the collection whenever called (to update any duration of running steps), and poll the
@@ -33,28 +32,27 @@ export function useCollectionStatusWatcher(
     }
 
     if (Date.now() - lastPoll > process.env.VUE_APP_COLLECTION_POLL_INTERVAL_MS) {
-      // Do not update the collection itself, to preserve transient details such as the last
+      // Do not update the full collection itself, to preserve transient details such as the last
       // checksum and any unsaved user input
-      cached = await api.getCollection(collection.value.sessionId);
+      const fetched = await api.getCollection(collection.value.sessionId);
+      collection.value.scheduledPlan = fetched.scheduledPlan;
+      collection.value.preingest = fetched.preingest;
       lastPoll = Date.now();
     }
 
     // TODO similar code in SessionProgress.vue and CollectionControl
-    // The fetched collection only knows about the current execution plan (if any) and all executed
-    // Actions, not all available Steps. Also, it may include the same action multiple times; merge
-    // the collection's Actions into the Steps
+    // The fetched collection only knows about the current or last execution plan (if any) and all
+    // executed Actions, not all available Steps. Also, it may include the same action multiple
+    // times if Steps were restarted; merge the collection's Actions into the Steps.
     for (const step of steps.value) {
       // TODO API is this indeed sorted?
-      const lastAction = cached?.preingest
+      const lastAction = collection.value.preingest
         ?.filter((action) => action.name === step.actionName)
         .pop();
 
-      const scheduledAction = cached?.scheduledPlan?.find(
+      const scheduledAction = collection.value.scheduledPlan?.find(
         (scheduled) => scheduled.actionName === step.actionName
       );
-
-      // TODO For checksum, copy the result
-      // collection.value.calculatedChecksum = ...
 
       // TODO Clear the checkbox when completed
 
@@ -78,19 +76,13 @@ export function useCollectionStatusWatcher(
       // // have set `step.lastStart`, and will have cleared `step.lastTriggerActionResult` and
       // // `step.lastAction`), even fresh API details may refer to a previous invocation; compare the
       // // expected `actionId` if applicable:
-      // if (
-      //   lastAction &&
-      //   (!step.lastTriggerActionResult ||
-      //     step.lastTriggerActionResult.actionId === lastAction.processId)
-      // ) {
-      //         // The server does not know about 'Wait', so for actions that are restarted we
-      //         // step.status = step.status === 'Wait' ? step.status : lastAction?.actionStatus;
 
       // Copy Pending and Executing from the scheduled plan, or the last result otherwise
       step.status =
         scheduledAction?.status && scheduledAction.status !== 'Done'
           ? scheduledAction.status
           : lastAction?.actionStatus;
+
       step.lastAction = lastAction;
       step.lastStart = lastAction?.summary?.start || lastAction?.creation || step.lastStart;
       // TODO validate comment and improve calculation if possible
@@ -98,6 +90,18 @@ export function useCollectionStatusWatcher(
       step.lastDuration = step.lastStart
         ? formatDateDifference(step.lastStart, lastAction?.summary?.end)
         : undefined;
+
+      // Update the last known checksum value (supporting two browser windows for the same session,
+      // and supporting page refresh)
+      if (
+        (!scheduledAction || scheduledAction.status === 'Done') &&
+        lastAction &&
+        lastAction.name === 'ContainerChecksumHandler' &&
+        lastAction.processId !== collection.value.calculatedChecksumProcessId
+      ) {
+        collection.value.calculatedChecksumProcessId = lastAction.processId;
+        await api.getLastCalculatedChecksum(collection.value);
+      }
     }
   };
 

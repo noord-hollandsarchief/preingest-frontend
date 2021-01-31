@@ -8,7 +8,15 @@
           <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
           <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
           <!-- TODO SHA-512 is far too long to display -->
-          <p>Checksum: {{ collection.calculatedChecksum ?? 'niet berekend' }}</p>
+          <p>
+            Checksum:
+            <span v-if="collection.calculatedChecksumValue">
+              {{ collection.calculatedChecksumType }}, {{ collection.calculatedChecksumValue }}
+              <Tag v-if="checksumStatus" severity="success">ok</Tag>
+              <Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
+            </span>
+            <span v-else>niet berekend</span>
+          </p>
           <!-- Somehow @change or @input from Dropdown does not bubble up here -->
           <div class="p-fluid p-formgrid p-grid" @input="settingsDirty = true">
             <div class="p-field p-col-12">
@@ -275,12 +283,6 @@ export default defineComponent({
         }
       }
 
-      // TODO API this may fail with 500 Internal Server Error if results don't exist, so swallow any error
-      // Fetch the checksum to be displayed with the general file details
-      collection.value.calculatedChecksum = await api
-        .getLastCalculatedChecksum(collection.value)
-        .catch(() => 'nog niet berekend');
-
       steps.value.forEach(
         (step) =>
           (step.fixedSelected = !step.allowRestart && step.status === 'Success' ? false : undefined)
@@ -307,6 +309,17 @@ export default defineComponent({
   computed: {
     hasSelection(): boolean {
       return this.selectedSteps.length > 0;
+    },
+
+    checksumStatus(): boolean | undefined {
+      if (!this.collection?.calculatedChecksumValue || !this.collection?.settings?.checksumValue) {
+        return undefined;
+      }
+      return (
+        this.collection.calculatedChecksumValue.trim().toLowerCase() ===
+          this.collection.settings.checksumValue.trim().toLowerCase() &&
+        this.collection.calculatedChecksumType === this.collection.settings.checksumType
+      );
     },
   },
   watch: {

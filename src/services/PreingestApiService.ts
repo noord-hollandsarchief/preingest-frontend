@@ -126,6 +126,7 @@ export type Step = DependentItem & {
   // Transient details.
   // The status as shown in the frontend, which may be no status at all
   status?: ActionStatus | WorkflowItemStatus;
+  // The last action that was executed for this (possibly restarted) step
   lastAction?: Action;
   lastStart?: string;
   lastDuration?: string;
@@ -278,11 +279,14 @@ export type Collection = {
   size: number;
   overallStatus: OverallStatus;
   preingest: Action[];
-  // The following attributes are not (yet) fetched from the API, but populated in the frontend
-  calculatedChecksum?: string;
   // This may be null in the API response (though that is fixed after fetching)
   settings?: Settings;
   scheduledPlan?: WorkflowItem[];
+
+  // Transient details, not fetched from the API directly, but populated in the frontend
+  calculatedChecksumType?: ChecksumType;
+  calculatedChecksumValue?: string;
+  calculatedChecksumProcessId?: string;
 };
 
 export type TriggerActionResult = {
@@ -297,8 +301,8 @@ export type TriggerActionResult = {
 export type ActionResult = {
   summary: ActionSummary;
   actionResult: {
-    // TODO API in `/api/output/json/:actionguid` this is called resultValue, and do we need the nesting?
-    name: ActionStatus;
+    // TODO API do we need the nesting?
+    resultValue: ActionStatus;
   };
   actionData?: string[];
 };
@@ -340,17 +344,41 @@ export class PreingestApiService {
   };
 
   /**
-   * Get the existing checksum result, if any.
+   * Get the existing checksum result, if any, and update the collection with those details.
    */
-  getLastCalculatedChecksum = async (collection: Collection): Promise<string | undefined> => {
+  getLastCalculatedChecksum = async (collection: Collection): Promise<void> => {
     const checksumStep = collection.preingest.find((a) => a.name === 'ContainerChecksumHandler');
+    console.log(collection, checksumStep);
     if (checksumStep) {
       const actionResult = await this.getActionResult(
         collection.sessionId,
         checksumStep.resultFiles
       );
       if (actionResult) {
-        return actionResult.actionData?.join(', ');
+        // Without user input for expected value (and user-selected SHA1):
+        //
+        //     "actionData": [
+        //       "SHA1",
+        //       "cc8d8a7d1de976bc94f7baba4c24409817f296c1"
+        //     ]
+        //
+        // Matching values (where user input was upper case):
+        //
+        //     "actionData": [
+        //       "SHA1",
+        //       "cc8d8a7d1de976bc94f7baba4c24409817f296c1",
+        //       "CC8D8A7D1DE976BC94F7BABA4C24409817F296C1 = cc8d8a7d1de976bc94f7baba4c24409817f296c1"
+        //     ]
+        //
+        // Non-matching values:
+        //
+        //     "actionData": [
+        //       "SHA1",
+        //       "cc8d8a7d1de976bc94f7baba4c24409817f296c1",
+        //       "d2970bcfa7717d2bdad34ed7a8ac649c ≠ cc8d8a7d1de976bc94f7baba4c24409817f296c1"
+        //     ]
+        collection.calculatedChecksumType = actionResult.actionData?.[0] as ChecksumType;
+        collection.calculatedChecksumValue = actionResult.actionData?.[1];
       }
     }
   };
