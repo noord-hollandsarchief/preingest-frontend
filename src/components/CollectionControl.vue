@@ -88,8 +88,8 @@
       <Toolbar class="p-mb-4">
         <template #left>
           <Button
-            :disabled="!hasSelection"
-            label="Start"
+            :disabled="!hasSelection || collection.overallStatus === 'Running'"
+            :label="collection.overallStatus === 'Running' ? 'Bezig...' : 'Start'"
             icon="pi pi-play"
             class="p-button-success p-mr-2"
             @click="runSelectedSteps"
@@ -198,7 +198,7 @@ import {
   securityTagTypes,
 } from '@/services/PreingestApiService';
 import { getDependencies, getDependents } from '@/utils/dependentList';
-import { formatDateDifference, formatDateString, formatFileSize } from '@/utils/formatters';
+import { formatDateString, formatFileSize } from '@/utils/formatters';
 
 interface SelectionEvent {
   originalEvent: Event;
@@ -264,29 +264,6 @@ export default defineComponent({
     // Load the file details and existing action states
     api.getCollection(props.sessionId).then(async (c) => {
       collection.value = c;
-
-      // TODO similar code in SessionProgress.vue
-      for (const step of steps.value) {
-        const lastAction = collection.value?.preingest
-          ?.filter((action) => action.name === step.actionName)
-          .pop();
-        step.status = lastAction?.actionStatus;
-
-        if (lastAction) {
-          step.lastAction = lastAction;
-          // TODO API remove fallback when API is fixed for DROID handlers
-          step.lastStart = lastAction.summary?.start || lastAction.creation;
-          // TODO API remove the IF when API is fixed for DROID handlers
-          if (step.lastStart) {
-            step.lastDuration = formatDateDifference(step.lastStart || '', lastAction.summary?.end);
-          }
-        }
-      }
-
-      steps.value.forEach(
-        (step) =>
-          (step.fixedSelected = !step.allowRestart && step.status === 'Success' ? false : undefined)
-      );
     });
 
     return {
@@ -342,6 +319,15 @@ export default defineComponent({
         // Eventually triggers this very watch again
         this.selectedSteps = this.steps.filter((step) => step.selected);
       }
+    },
+
+    steps: {
+      deep: true,
+      handler: function (newSteps: Step[]) {
+        this.selectedSteps = this.selectedSteps.filter((selectedStep) =>
+          newSteps.some((step) => step.selected && step.id === selectedStep.id)
+        );
+      },
     },
   },
   methods: {

@@ -35,12 +35,13 @@ export function useCollectionStatusWatcher(
       // Do not update the full collection itself, to preserve transient details such as the last
       // checksum and any unsaved user input
       const fetched = await api.getCollection(collection.value.sessionId);
+      collection.value.overallStatus = fetched.overallStatus;
       collection.value.scheduledPlan = fetched.scheduledPlan;
       collection.value.preingest = fetched.preingest;
       lastPoll = Date.now();
     }
 
-    // TODO similar code in SessionProgress.vue and CollectionControl
+    // TODO similar code in SessionProgress.vue
     // The fetched collection only knows about the current or last execution plan (if any) and all
     // executed Actions, not all available Steps. Also, it may include the same action multiple
     // times if Steps were restarted; merge the collection's Actions into the Steps.
@@ -53,8 +54,6 @@ export function useCollectionStatusWatcher(
       const scheduledAction = collection.value.scheduledPlan?.find(
         (scheduled) => scheduled.actionName === step.actionName
       );
-
-      // TODO Clear the checkbox when completed
 
       // If any scheduled step reports Done while its action reports Failed, then the execution
       // plan will stop, possibly leaving items in Pending state. We could wipe the execution plan,
@@ -82,6 +81,13 @@ export function useCollectionStatusWatcher(
         scheduledAction?.status && scheduledAction.status !== 'Done'
           ? scheduledAction.status
           : lastAction?.actionStatus;
+
+      step.fixedSelected = !step.allowRestart && step.status === 'Success' ? false : undefined;
+
+      // Deselect when done, if running in the same window that started the scheduled actions
+      if (step.selected) {
+        step.selected = step.fixedSelected ?? scheduledAction?.status !== 'Done';
+      }
 
       step.lastAction = lastAction;
       step.lastStart = lastAction?.summary?.start || lastAction?.creation || step.lastStart;
