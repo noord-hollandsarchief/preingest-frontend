@@ -119,8 +119,6 @@ export type Step = DependentItem & {
   description: string;
   // Tooltip help text
   info?: string;
-  // The HTTP method, default POST
-  method?: string;
   allowRestart?: boolean;
 
   // Transient details.
@@ -151,7 +149,6 @@ export const stepDefinitions: Step[] = [
     id: 'calculate',
     dependsOn: [],
     actionName: 'ContainerChecksumHandler',
-    method: 'GET',
     description: 'Checksum berekenen',
   },
   {
