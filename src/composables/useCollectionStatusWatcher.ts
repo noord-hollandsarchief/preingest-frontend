@@ -70,11 +70,17 @@ export function useCollectionStatusWatcher(
         });
       }
 
-      // TODO remove reference to step.lastStart and all else from the comment below
-      // // If a step has just been restarted (for which the application in this browser window will
-      // // have set `step.lastStart`, and will have cleared `step.lastTriggerActionResult` and
-      // // `step.lastAction`), even fresh API details may refer to a previous invocation; compare the
-      // // expected `actionId` if applicable:
+      // Deselect when done (if running in the window that started the scheduled actions), ensuring
+      // steps can be re-selected for restart even though the API will still return the last
+      // scheduled plan when it completed or failed.
+      if (
+        step.selected &&
+        step.status &&
+        ['Pending', 'Executing'].includes(step.status) &&
+        scheduledAction?.status === 'Done'
+      ) {
+        step.selected = false;
+      }
 
       // Copy Pending and Executing from the scheduled plan, or the last result otherwise
       step.status =
@@ -83,11 +89,7 @@ export function useCollectionStatusWatcher(
           : lastAction?.actionStatus;
 
       step.fixedSelected = !step.allowRestart && step.status === 'Success' ? false : undefined;
-
-      // Deselect when done, if running in the same window that started the scheduled actions
-      if (step.selected) {
-        step.selected = step.fixedSelected ?? scheduledAction?.status !== 'Done';
-      }
+      step.selected = step.fixedSelected ?? step.selected;
 
       step.lastAction = lastAction;
       step.lastStart = lastAction?.summary?.start || lastAction?.creation || step.lastStart;
