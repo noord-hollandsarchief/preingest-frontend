@@ -92,7 +92,7 @@
             :label="collection.overallStatus === 'Running' ? 'Bezig...' : 'Start'"
             icon="pi pi-play"
             class="p-button-success p-mr-2"
-            @click="runSelectedSteps"
+            @click="checkSettingsAndRunSelectedSteps"
           />
         </template>
 
@@ -255,7 +255,7 @@ export default defineComponent({
     steps.value.forEach((step) => (step.selected = step.fixedSelected ?? step.selected));
     selectedSteps.value = steps.value.filter((step) => step.selected);
 
-    const { runSelectedSteps } = useStepsRunner(collection, steps);
+    const { missingSettings, runSelectedSteps } = useStepsRunner(collection, steps);
 
     const { startWatcher, stopWatcher } = useCollectionStatusWatcher(collection, steps);
     startWatcher();
@@ -280,6 +280,7 @@ export default defineComponent({
       selectedSteps,
       collection,
       settingsDirty,
+      missingSettings,
       runSelectedSteps,
     };
   },
@@ -379,6 +380,16 @@ export default defineComponent({
       if (this.collection?.settings) {
         this.api.saveSettings(this.collection.sessionId, this.collection.settings);
         this.settingsDirty = false;
+      }
+    },
+
+    checkSettingsAndRunSelectedSteps() {
+      const missingSettings = this.missingSettings();
+      if (missingSettings.length) {
+        // TODO show settings dialog
+        alert(`De volgende instellingen ontbreken: ${missingSettings.join(', ')}`);
+      } else {
+        this.runSelectedSteps();
       }
     },
 

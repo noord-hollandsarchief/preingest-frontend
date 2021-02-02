@@ -120,6 +120,7 @@ export type Step = DependentItem & {
   // Tooltip help text
   info?: string;
   allowRestart?: boolean;
+  requiredSettings?: (keyof Settings)[];
 
   // Transient details.
   // The status as shown in the frontend, which may be no status at all
@@ -148,6 +149,7 @@ export const stepDefinitions: Step[] = [
   {
     id: 'calculate',
     dependsOn: [],
+    requiredSettings: ['checksumType', 'checksumValue'],
     actionName: 'ContainerChecksumHandler',
     description: 'Checksum berekenen',
   },
