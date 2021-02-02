@@ -1,6 +1,6 @@
 import { Ref } from 'vue';
 import { useApi } from '@/plugins/PreingestApi';
-import { Collection, Settings, Step } from '@/services/PreingestApiService';
+import { Collection, SettingsKey, Step } from '@/services/PreingestApiService';
 
 export function useStepsRunner(collection: Ref<Collection | undefined>, steps: Ref<Step[]>) {
   const api = useApi();
@@ -8,18 +8,28 @@ export function useStepsRunner(collection: Ref<Collection | undefined>, steps: R
   const selectedSteps = () => steps.value.filter((step) => step.selected);
 
   /**
-   * Return a (possibly empty) list of settings that are missing a value, like the checksum type
-   * when calculating the checksum.
+   * Return a (possibly empty) list of settings that are required for the selected actions, like the
+   * checksum type when calculating the checksum.
    */
-  const missingSettings = () => {
+  const requiredSettings = () => {
     return selectedSteps().reduce((acc, step) => {
       for (const setting of step.requiredSettings || []) {
-        if (!collection.value?.settings?.[setting]) {
-          acc.push(setting);
-        }
+        acc.push(setting);
       }
       return acc;
-    }, [] as (keyof Settings)[]);
+    }, [] as SettingsKey[]);
+  };
+
+  /**
+   * Return a (possibly empty) list of {@link requiredSettings} that are missing a value.
+   */
+  const missingSettings = () => {
+    return requiredSettings().reduce((acc, setting) => {
+      if (!collection.value?.settings?.[setting]) {
+        acc.push(setting);
+      }
+      return acc;
+    }, [] as SettingsKey[]);
   };
 
   /**
@@ -45,6 +55,7 @@ export function useStepsRunner(collection: Ref<Collection | undefined>, steps: R
   };
 
   return {
+    requiredSettings,
     missingSettings,
     runSelectedSteps,
   };

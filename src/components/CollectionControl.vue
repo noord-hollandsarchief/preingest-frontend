@@ -4,83 +4,50 @@
       <div>
         <h3>Gegevens</h3>
         <p>Bestandsnaam: {{ collection.name }}</p>
-        <div>
-          <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
-          <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
-          <!-- TODO SHA-512 is far too long to display -->
-          <p>
-            Checksum:
-            <span v-if="collection.calculatedChecksumValue">
-              {{ collection.calculatedChecksumType }}, {{ collection.calculatedChecksumValue }}
-              <Tag v-if="checksumStatus" severity="success">ok</Tag>
-              <Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
-            </span>
-            <span v-else>niet berekend</span>
-          </p>
-          <!-- Somehow @change or @input from Dropdown does not bubble up here -->
-          <div class="p-fluid p-formgrid p-grid" @input="settingsDirty = true">
-            <div class="p-field p-col-12">
-              <label for="description">Omschrijving</label>
-              <Textarea
-                id="description"
-                v-model="collection.settings.description"
-                rows="1"
-                :autoResize="true"
-              />
-            </div>
-            <div class="p-field p-col-12 p-md-3">
-              <label for="checksumType">Type checksum</label>
-              <Dropdown
-                id="checksumType"
-                v-model="collection.settings.checksumType"
-                :options="checksumTypes"
-                optionLabel="name"
-                optionValue="code"
-                placeholder="Maak een keuze"
-                @change="settingsDirty = true"
-              />
-            </div>
-            <div class="p-field p-col-12 p-md-9">
-              <label for="expectedChecksum">Opgegeven checksum</label>
-              <InputText
-                id="expectedChecksum"
-                v-model="collection.settings.checksumValue"
-                type="text"
-                placeholder="De checksum van de zorgdrager"
-              />
-            </div>
-            <div class="p-field p-col-12 p-md-3">
-              <label for="preservicaSecurityTag">Preservica security</label>
-              <Dropdown
-                id="preservicaSecurityTag"
-                v-model="collection.settings.preservicaSecurityTag"
-                :options="securityTagTypes"
-                optionLabel="name"
-                optionValue="code"
-                placeholder="Maak een keuze"
-                @change="settingsDirty = true"
-              />
-            </div>
-            <div class="p-field p-col-12 p-md-9">
-              <label for="preservicaTarget">Preservica doellocatie</label>
-              <InputText
-                id="preservicaTarget"
-                v-model="collection.settings.preservicaTarget"
-                type="text"
-                placeholder="Optionele GUID van locatie in Preservica"
-              />
-            </div>
-          </div>
-          <Button
-            label="Opslaan"
-            icon="pi pi-save"
-            class="p-button-success p-mr-2"
-            :disabled="settingsDirty ? null : 'disabled'"
-            @click="save"
-          />
-        </div>
+        <p v-if="collection.settings.description">
+          Omschrijving: {{ collection.settings.description }}
+        </p>
+        <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
+        <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
+        <p v-if="collection.calculatedChecksumValue">
+          Berekende checksum:
+          <span>
+            <!-- TODO show display name -->
+            <!-- TODO SHA-512 is far too long to display -->
+            {{ collection.calculatedChecksumType }}, {{ collection.calculatedChecksumValue }}
+            <Tag v-if="checksumStatus" severity="success">ok</Tag>
+            <Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
+          </span>
+        </p>
+        <p v-if="collection.settings.checksumValue">
+          <!-- TODO show display name -->
+          Verwachte checksum: {{ collection.settings.checksumType }},
+          {{ collection.settings.checksumValue }}
+        </p>
+        <p v-if="collection.settings.preservicaSecurityTag">
+          <!-- TODO show display name -->
+          Standaardtoegang: {{ collection.settings.preservicaSecurityTag }}
+        </p>
+        <p v-if="collection.settings.preservicaTarget">
+          Preservica doellocatie: {{ collection.settings.preservicaTarget }}
+        </p>
       </div>
+
+      <Button
+        :disabled="collection.overallStatus === 'Running'"
+        label="Instellingen"
+        icon="pi pi-pencil"
+        class="p-button-success p-mr-2"
+        @click="editSettings"
+      />
     </div>
+
+    <CollectionSettingsDialog
+      v-model:visible="showSettings"
+      :collection="collection"
+      :required-settings="requiredSettings()"
+      :onSaveAndRun="onSaveAndRun"
+    />
 
     <div class="card">
       <h3>Verwerken</h3>
@@ -199,6 +166,7 @@ import {
 } from '@/services/PreingestApiService';
 import { getDependencies, getDependents } from '@/utils/dependentList';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
+import CollectionSettingsDialog from '@/components/CollectionSettingsDialog.vue';
 
 interface SelectionEvent {
   originalEvent: Event;
@@ -210,6 +178,7 @@ interface RowExpandEvent {
 }
 
 export default defineComponent({
+  components: { CollectionSettingsDialog },
   props: {
     sessionId: {
       type: String,
@@ -224,10 +193,8 @@ export default defineComponent({
     const expandedRows = ref([]);
     const collection = ref<Collection | undefined>();
     const selectedSteps = ref<Step[]>([]);
-
-    // TODO move settings into their own component that cannot have settings be null, making watching possible
-    // TODO add dirty warning on navigation
-    const settingsDirty = ref(false);
+    const showSettings = ref(false);
+    const onSaveAndRun = ref<Function>();
 
     const notImplemented = () => {
       toast.add({
@@ -255,7 +222,10 @@ export default defineComponent({
     steps.value.forEach((step) => (step.selected = step.fixedSelected ?? step.selected));
     selectedSteps.value = steps.value.filter((step) => step.selected);
 
-    const { missingSettings, runSelectedSteps } = useStepsRunner(collection, steps);
+    const { requiredSettings, missingSettings, runSelectedSteps } = useStepsRunner(
+      collection,
+      steps
+    );
 
     const { startWatcher, stopWatcher } = useCollectionStatusWatcher(collection, steps);
     startWatcher();
@@ -279,7 +249,9 @@ export default defineComponent({
       steps,
       selectedSteps,
       collection,
-      settingsDirty,
+      onSaveAndRun,
+      showSettings,
+      requiredSettings,
       missingSettings,
       runSelectedSteps,
     };
@@ -376,18 +348,22 @@ export default defineComponent({
       };
     },
 
-    save() {
-      if (this.collection?.settings) {
-        this.api.saveSettings(this.collection.sessionId, this.collection.settings);
-        this.settingsDirty = false;
-      }
+    editSettings() {
+      this.onSaveAndRun = undefined;
+      this.showSettings = true;
     },
 
     checkSettingsAndRunSelectedSteps() {
       const missingSettings = this.missingSettings();
       if (missingSettings.length) {
-        // TODO show settings dialog
-        alert(`De volgende instellingen ontbreken: ${missingSettings.join(', ')}`);
+        this.toast.add({
+          severity: 'info',
+          summary: 'Configuratie incompleet',
+          detail: 'Er ontbreken instellingen om alle geselecteerde acties uit te voeren.',
+          life: 3000,
+        });
+        this.onSaveAndRun = this.runSelectedSteps;
+        this.showSettings = true;
       } else {
         this.runSelectedSteps();
       }

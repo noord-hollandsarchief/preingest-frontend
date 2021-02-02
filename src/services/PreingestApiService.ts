@@ -120,7 +120,7 @@ export type Step = DependentItem & {
   // Tooltip help text
   info?: string;
   allowRestart?: boolean;
-  requiredSettings?: (keyof Settings)[];
+  requiredSettings?: SettingsKey[];
 
   // Transient details.
   // The status as shown in the frontend, which may be no status at all
@@ -257,6 +257,8 @@ export type Settings = {
   preservicaTarget?: string;
   preservicaSecurityTag?: string;
 };
+
+export type SettingsKey = keyof Settings;
 
 export type WorkflowItem = {
   status?: WorkflowItemStatus;
