@@ -347,7 +347,6 @@ export class PreingestApiService {
    */
   getLastCalculatedChecksum = async (collection: Collection): Promise<void> => {
     const checksumStep = collection.preingest.find((a) => a.name === 'ContainerChecksumHandler');
-    console.log(collection, checksumStep);
     if (checksumStep) {
       const actionResult = await this.getActionResult(
         collection.sessionId,
