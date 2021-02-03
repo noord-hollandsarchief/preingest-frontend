@@ -36,7 +36,7 @@
       <Button
         :disabled="collection.overallStatus === 'Running'"
         label="Instellingen"
-        icon="pi pi-pencil"
+        icon="pi pi-cog"
         class="p-button-success p-mr-2"
         @click="editSettings"
       />

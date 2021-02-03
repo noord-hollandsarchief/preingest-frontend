@@ -69,12 +69,18 @@
     </div>
 
     <template #footer>
-      <Button label="Annuleren" icon="pi pi-times" class="p-button-text" @click="cancel" />
+      <Button
+        label="Annuleren"
+        icon="pi pi-times"
+        class="p-button-text"
+        :disabled="!saving ? null : 'disabled'"
+        @click="cancel"
+      />
       <Button
         label="Opslaan"
         icon="pi pi-save"
         class="p-button-success p-mr-2"
-        :disabled="settingsDirty ? null : 'disabled'"
+        :disabled="settingsDirty && !saving ? null : 'disabled'"
         @click="save"
       />
       <Button
@@ -82,7 +88,7 @@
         label="Opslaan en start"
         icon="pi pi-play"
         class="p-button-success p-mr-2"
-        :disabled="allRequiredSet() ? null : 'disabled'"
+        :disabled="allRequiredSet() && !saving ? null : 'disabled'"
         @click="saveAndRun"
       />
     </template>
@@ -108,6 +114,7 @@ export default defineComponent({
       // where `v-model` is needed to tell the parent component that the dialog closed
       required: false,
     },
+    // collection.settings will be updated when saving
     collection: {
       type: Object as PropType<Collection>,
       required: true,
@@ -117,7 +124,7 @@ export default defineComponent({
       required: true,
     },
     onSaveAndRun: {
-      type: Object as PropType<Function>,
+      type: Function,
       required: false,
     },
   },
@@ -126,6 +133,7 @@ export default defineComponent({
     const api = useApi();
     const settings = ref<Settings>({});
     const settingsDirty = ref(false);
+    const saving = ref(false);
 
     const json = ref({});
     return {
@@ -138,6 +146,7 @@ export default defineComponent({
       securityTagTypes,
       settingsDirty,
       settings,
+      saving,
     };
   },
 
@@ -145,6 +154,7 @@ export default defineComponent({
     init() {
       this.settings = { ...this.collection.settings };
       this.settingsDirty = false;
+      this.saving = false;
     },
 
     close() {
@@ -156,7 +166,9 @@ export default defineComponent({
     },
 
     cancel() {
-      this.close();
+      if (!this.saving) {
+        this.close();
+      }
     },
 
     // Only invoked when user hits Escape or the close button (so, ALWAYS with value `false`), for
@@ -168,9 +180,13 @@ export default defineComponent({
     },
 
     async save() {
+      this.saving = true;
       // eslint-disable-next-line vue/no-mutating-props
       this.collection.settings = this.settings;
       await this.api.saveSettings(this.collection.sessionId, this.collection.settings);
+      // Keeping the dialog open until saved also hides a bit of confusion, where the "Start"
+      // button may show "Running" due to the collection's `"overallStatus": "running"` while
+      // persisting the settings (rather than truly indicating the actions are running).
       this.close();
     },
 
