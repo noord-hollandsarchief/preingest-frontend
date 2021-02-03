@@ -434,16 +434,15 @@ export class PreingestApiService {
   };
 
   resetSession = async (sessionId: string): Promise<void> => {
-    // TODO API should wipe details from Plan table
-    await this.cancelExecutionPlan(sessionId);
-
     await this.fetchWithDefaults<TriggerActionResult>(`Status/reset/${sessionId}`, {
       method: 'DELETE',
     });
+  };
 
-    await this.delay(1000);
-    // Recreate the session folder (and any other missing session folder)
-    await this.getCollections();
+  removeSessionAndFile = async (sessionId: string): Promise<void> => {
+    await this.fetchWithDefaults<TriggerActionResult>(`Status/remove/${sessionId}`, {
+      method: 'DELETE',
+    });
   };
 
   /**

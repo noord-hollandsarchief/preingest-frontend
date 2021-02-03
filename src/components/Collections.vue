@@ -3,19 +3,48 @@
     <DataTable
       :value="collections"
       :autoLayout="true"
+      v-model:selection="selectedCollections"
       :filters="filters"
       sortField="creationTime"
       :sortOrder="1"
+      :rowHover="true"
     >
       <template #header>
-        <div style="text-align: right">
-          <i class="pi pi-search" style="margin: 4px 4px 0 0"></i>
+        <Button
+          v-if="hasSelection"
+          :disabled="!hasSelection || resetting || deleting"
+          :label="resetting ? 'Bezig...' : 'Wis resultaten'"
+          icon="pi pi-replay"
+          class="p-button-warning p-mr-2"
+          @click="resetCollections"
+        />
+        <Button
+          v-if="hasSelection"
+          :disabled="!hasSelection || resetting || deleting"
+          :label="deleting ? 'Bezig...' : 'Verwijder bestanden'"
+          icon="pi pi-trash"
+          class="p-button-danger p-mr-2"
+          @click="removeCollections"
+        />
+
+        <!-- TODO matching search somehow moves focus to selection checkbox -->
+        <!-- TODO clear search icon -->
+        <span class="p-input-icon-left">
+          <i class="pi pi-search"></i>
           <!-- This searches in the original data (unless excluded) -->
           <InputText v-model="filters['global']" placeholder="Zoek" size="50" />
-        </div>
+        </span>
       </template>
 
-      <Column field="name" header="Naam" :sortable="true" filterMatchMode="contains" />
+      <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+
+      <Column field="name" header="Naam" :sortable="true" filterMatchMode="contains">
+        <template #body="slotProps">
+          <router-link :to="`/s/${slotProps.data.sessionId}`">
+            {{ slotProps.data.name }}
+          </router-link>
+        </template>
+      </Column>
 
       <Column
         field="creationTime"
@@ -88,32 +117,6 @@
           <SessionProgress :preingestActions="slotProps.data.preingest" />
         </template>
       </Column>
-
-      <Column headerStyle="width:8rem">
-        <template #body="slotProps">
-          <router-link :to="`/s/${slotProps.data.sessionId}`" style="text-decoration: none">
-            <Button
-              v-if="slotProps.data.overallStatus !== 'New'"
-              icon="pi pi-eye"
-              class="p-button-sm p-button-rounded"
-              v-tooltip.left="'Bekijk de resultaten of ga verder met verwerken'"
-            />
-            <Button
-              v-else
-              icon="pi pi-play"
-              class="p-button-sm p-button-rounded p-button-success"
-              v-tooltip.left="'Start verwerking van dit bestand'"
-            />
-          </router-link>
-
-          <Button
-            icon="pi pi-trash"
-            class="p-button-sm p-button-rounded p-button-warning p-ml-2"
-            @click="deleteFile($event, slotProps.data)"
-            v-tooltip.left="'Verwijder het bestand en de resultaten'"
-          />
-        </template>
-      </Column>
     </DataTable>
   </div>
 </template>
@@ -136,34 +139,108 @@ export default defineComponent({
     const filters = ref({});
     const multiSortMeta = ref([{ field: 'creationTime', order: 1 }]);
     const collections = ref<Collection[]>(await api.getCollections());
+    const selectedCollections = ref<Collection[]>([]);
+    const resetting = ref(false);
+    const deleting = ref(false);
 
     return {
+      api,
       formatDateString,
       formatFileSize,
       confirm,
       toast,
       collections,
+      selectedCollections,
       filters,
       multiSortMeta,
+      resetting,
+      deleting,
     };
   },
+  computed: {
+    hasSelection(): boolean {
+      return this.selectedCollections.length > 0;
+    },
+  },
   methods: {
-    deleteFile(event: Event, collection: Collection) {
+    async removeCollections() {
+      // TODO block UI
+      const count = this.selectedCollections.length;
+      const names = this.selectedCollections
+        .map((c) => `"${c.name}"`)
+        .join(', ')
+        .replace(/^(.*)(, )([^,]*)$/, '$1 en $3');
+
       this.confirm.require({
-        header: 'Bestand en resultaten definitief verwijderen',
-        message: `Het bestand "${collection.name}" en bijbehorende resultaten definitief van disk verwijderen?`,
+        header: `Bestand${count > 1 ? 'en' : ''} en resultaten definitief verwijderen`,
+        message: `${
+          count === 1 ? 'Het bestand' : `De ${count} bestanden`
+        } ${names} en bijbehorende resultaten definitief van disk verwijderen?`,
         icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger',
         acceptLabel: 'Verwijderen',
         rejectLabel: 'Annuleren',
-        accept: () => {
-          // TODO Invoke API to delete the file
+        accept: async () => {
+          this.deleting = true;
+
+          for (const collection of this.selectedCollections) {
+            await this.api.removeSessionAndFile(collection.sessionId);
+            this.selectedCollections = this.selectedCollections.filter(
+              (c) => c.sessionId !== collection.sessionId
+            );
+          }
+
           this.toast.add({
             severity: 'info',
-            summary: `TODO Delete file ${collection.name}`,
-            detail: `Session ${collection.sessionId}`,
-            life: 2000,
+            summary: `${count} bestand${count > 1 ? 'en' : ''}  met resultaten verwijderd`,
+            life: 5000,
           });
+
+          this.collections = await this.api.getCollections();
+          this.deleting = false;
+        },
+        reject: () => {
+          // User canceled
+        },
+      });
+    },
+
+    // TODO DRY
+    async resetCollections() {
+      // TODO block UI
+      const count = this.selectedCollections.length;
+      const names = this.selectedCollections
+        .map((c) => `"${c.name}"`)
+        .join(', ')
+        .replace(/^(.*)(, )([^,]*)$/, '$1 en $3');
+
+      this.confirm.require({
+        header: `Resultaten wissen`,
+        message: `De resultaten van ${
+          count === 1 ? 'het bestand' : `de ${count} bestanden`
+        } ${names} wissen? ${count === 1 ? 'Het bestand blijft' : 'De bestanden blijven'} bestaan.`,
+        icon: 'pi pi-exclamation-triangle',
+        acceptClass: 'p-button-warning',
+        acceptLabel: 'Wis resultaten',
+        rejectLabel: 'Annuleren',
+        accept: async () => {
+          this.resetting = true;
+
+          for (const collection of this.selectedCollections) {
+            await this.api.resetSession(collection.sessionId);
+            this.selectedCollections = this.selectedCollections.filter(
+              (c) => c.sessionId !== collection.sessionId
+            );
+          }
+
+          this.toast.add({
+            severity: 'info',
+            summary: `Resultaten van ${count} bestand${count > 1 ? 'en' : ''} gewist`,
+            life: 5000,
+          });
+
+          this.collections = await this.api.getCollections();
+          this.resetting = false;
         },
         reject: () => {
           // User canceled
@@ -175,8 +252,7 @@ export default defineComponent({
 </script>
 
 <style scoped lang="scss">
-.collection-sessions {
-  // TODO sass param
-  margin-left: 1.3 * 3rem;
+a:visited {
+  color: inherit;
 }
 </style>
