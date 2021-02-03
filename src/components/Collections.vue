@@ -76,7 +76,7 @@
       </Column>
 
       <Column
-        field="status"
+        field="overallStatus"
         header="Status"
         :sortable="true"
         headerClass="p-text-center"
