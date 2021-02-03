@@ -13,6 +13,7 @@
 // does not match the corresponding path on disk `usetoast.js`.
 // See https://github.com/primefaces/primevue/issues/813
 import { useToast } from 'primevue/components/toast/useToast';
+import dayjs from 'dayjs';
 import { DependentItem } from '@/utils/dependentList';
 
 export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
@@ -50,8 +51,8 @@ export type ActionSummary = {
 };
 
 /**
- * Partial definition of the action results in the responses of `/api/output/collection` and
- * `/api/output/collections`.
+ * Partial definition of the action results in the responses of `api/status/action/:actionGuid`,
+ * `/api/output/collection/:sessionId` and `/api/output/collections`.
  *
  * Note that a single Action can occur more than once in the API responses, if executed multiple
  * times for a single Step, or if multiple Steps use the same action with different parameters.
@@ -314,6 +315,31 @@ export class PreingestApiService {
   private baseUrl = process.env.VUE_APP_PREINGEST_API;
   private delay = (timeout: number) => new Promise((res) => setTimeout(res, timeout));
 
+  private async repeatUntilResult<T>(
+    fn: () => Promise<T | undefined>,
+    maxSeconds = process.env.VUE_APP_STEP_MAX_SECONDS
+  ): Promise<T> {
+    const startTime = dayjs();
+    const endTime = startTime.add(maxSeconds, 's');
+    let tries = 0;
+    while (dayjs().isBefore(endTime)) {
+      if (tries > 0) {
+        // To easily show the elapsed time, we cannot use some, e.g., exponential backoff
+        await this.delay(500);
+      }
+      tries++;
+      try {
+        const result = await fn();
+        if (result) {
+          return result;
+        }
+      } catch (e) {
+        // If important, then this should already have been reported by whatever function we invoked
+      }
+    }
+    throw `Geen resultaat na ${tries} pogingen in ${dayjs().diff(startTime, 'm')} minuten.`;
+  }
+
   getCollections = async (): Promise<Collection[]> => {
     return this.fetchWithDefaults('output/collections');
   };
@@ -384,10 +410,42 @@ export class PreingestApiService {
     }
   };
 
-  saveSettings = async (sessionId: string, settings: Settings): Promise<TriggerActionResult> => {
-    return await this.fetchWithDefaults<TriggerActionResult>(`preingest/settings/${sessionId}`, {
-      method: 'PUT',
-      body: JSON.stringify(settings),
+  /**
+   * Save the settings and make sure that the backend has completed doing so.
+   */
+  saveSettings = async (sessionId: string, settings: Settings): Promise<Action> => {
+    const result = await this.fetchWithDefaults<TriggerActionResult>(
+      `preingest/settings/${sessionId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+      }
+    );
+
+    // The API handles this like any other action: it reports it has accepted the request but may
+    // not have completed executing it. Ensure it's done before returning.
+    return this.repeatUntilResult(async () => {
+      // We could also rely on `useCollectionStatusWatcher` which will update `preingest`
+      const status = await this.fetchWithDefaults<Action>(`status/action/${result.actionId}`);
+      // Right after triggering save, this may return:
+      //
+      //     {
+      //       "creation": "2021-02-03T08:59:57.5748151+00:00",
+      //       "description": "Save user input setting(s) for folder 1bff9806-4c59-50d5-b761-2bf6cfb18472",
+      //       "sessionId": "1bff9806-4c59-50d5-b761-2bf6cfb18472",
+      //       "name": "SettingsHandler",
+      //       "actionId": "c7bbfff4-9e58-4470-80b8-e4cfdaf62e75",
+      //       "resultFiles": [
+      //         "SettingsHandler.json"
+      //       ],
+      //       "actionStatus": null
+      //     }
+      if (status.actionStatus === 'Success') {
+        // Done; return the results of the action; won't be used
+        return status;
+      }
+      // Repeat
+      return undefined;
     });
   };
 
