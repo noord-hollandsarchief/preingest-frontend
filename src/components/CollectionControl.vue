@@ -63,11 +63,11 @@
 
         <template #right>
           <Button
-            :disabled="true"
-            label="Ingest"
-            icon="pi pi-upload"
+            :disabled="!collection.excelCreatorDownloadUrl"
+            label="Rapportage"
+            icon="pi pi-download"
             class="p-button-help p-mx-2"
-            @click="runIngest"
+            @click="downloadExcel"
           />
         </template>
       </Toolbar>
@@ -141,6 +141,7 @@
 
         <template #expansion="slotProps">
           <a v-if="slotProps.data.downloadUrl" :href="slotProps.data.downloadUrl">Download</a>
+          <!-- TODO styling, especially scrollbars -->
           <div class="pre">{{ slotProps.data.result }}</div>
         </template>
       </DataTable>
@@ -234,6 +235,10 @@ export default defineComponent({
       collection.value = c;
     });
 
+    const downloadExcel = () => {
+      location.href = collection.value?.excelCreatorDownloadUrl || '';
+    };
+
     return {
       api,
       checksumTypes,
@@ -252,6 +257,7 @@ export default defineComponent({
       requiredSettings,
       missingSettings,
       runSelectedSteps,
+      downloadExcel,
     };
   },
   computed: {
@@ -329,21 +335,8 @@ export default defineComponent({
     },
 
     async onStepExpand(event: RowExpandEvent) {
-      const step = event.data;
-      // We may already have loaded the result/link earlier
-      if (this.collection && step.lastAction && !step.result && !step.downloadUrl) {
-        // Assume at most one JSON result and one download link
-        const resultFiles = Array.isArray(step.lastAction.resultFiles)
-          ? step.lastAction.resultFiles
-          : step.lastAction.resultFiles.split(';');
-
-        for (const resultFile of resultFiles) {
-          if (resultFile.endsWith('.json')) {
-            step.result = await this.api.getActionResult(this.collection.sessionId, resultFile);
-          } else {
-            step.downloadUrl = this.api.getActionReportUrl(this.collection.sessionId, resultFile);
-          }
-        }
+      if (this.collection) {
+        await this.api.getLastActionResults(this.collection.sessionId, event.data);
       }
     },
 
@@ -376,16 +369,6 @@ export default defineComponent({
       } else {
         this.runSelectedSteps();
       }
-    },
-
-    runIngest() {
-      // TODO Trigger ingest
-      this.notImplemented();
-    },
-
-    downloadExcel() {
-      // TODO Download Excel report
-      this.notImplemented();
     },
   },
 });

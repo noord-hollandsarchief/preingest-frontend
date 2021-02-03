@@ -71,7 +71,7 @@ export type ActionSummary = {
  *   "folderSessionId": "b56f1128-df58-7d5f-988a-9ec48c559257",
  *   "name": "ContainerChecksumHandler",
  *   "processId": "e7920e0b-95c8-4b94-bc95-dc0c0bf6748d",
- *   "resultFiles": "ContainerChecksumHandler.json",
+ *   "resultFiles": ["ContainerChecksumHandler.json"],
  *   "summary": {
  *     "processed": 1,
  *     "accepted": 1,
@@ -98,11 +98,10 @@ export type Action = {
   // The status of the actual execution, but not (yet) including `Waiting`
   actionStatus: ActionStatus;
   creation: string;
-  // The handler name, like `UnpackTarHandler`, `ContainerChecksumHandler` or `Droid - PDF report`
+  // The handler name, like `UnpackTarHandler`, `ContainerChecksumHandler` or `ReportingPdfHandler`
   name: string;
-  // Like ContainerChecksumHandler.json and UnpackTarHandler.json
-  // TODO API singular
-  resultFiles: string;
+  // Like ["ExcelCreatorHandler.json", "ExcelCreatorHandler.xslx"]
+  resultFiles: string[];
   // TODO API rename to actionId?
   processId: string;
   summary?: ActionSummary;
@@ -131,6 +130,7 @@ export type Step = DependentItem & {
   status?: ActionStatus | WorkflowItemStatus;
   // The last action that was executed for this (possibly restarted) step
   lastAction?: Action;
+  lastActionProcessId?: string;
   lastStart?: string;
   lastDuration?: string;
   // The initial or current selection state
@@ -292,7 +292,7 @@ export type Collection = {
   // Transient details, not fetched from the API directly, but populated in the frontend
   calculatedChecksumType?: ChecksumType;
   calculatedChecksumValue?: string;
-  calculatedChecksumProcessId?: string;
+  excelCreatorDownloadUrl?: string;
 };
 
 export type TriggerActionResult = {
@@ -366,7 +366,7 @@ export class PreingestApiService {
   // UnpackTarHandler.json and so on.
   getActionResult = async (sessionId: string, resultFileName: string): Promise<ActionResult> => {
     // TODO this may fail with 500 Internal Server Error if results don't exist
-    return this.fetchWithDefaults(`output/json/${sessionId}/${resultFileName}`);
+    return await this.fetchWithDefaults(`output/json/${sessionId}/${resultFileName}`);
   };
 
   // DroidValidationHandler.pdf and so on.
@@ -375,40 +375,21 @@ export class PreingestApiService {
   };
 
   /**
-   * Get the existing checksum result, if any, and update the collection with those details.
+   * Populate the step's JSON result and/or single download link given its {@link Step.lastAction}.
    */
-  getLastCalculatedChecksum = async (collection: Collection): Promise<void> => {
-    const checksumStep = collection.preingest.find((a) => a.name === 'ContainerChecksumHandler');
-    if (checksumStep) {
-      const actionResult = await this.getActionResult(
-        collection.sessionId,
-        checksumStep.resultFiles
-      );
-      if (actionResult) {
-        // Without user input for expected value (and user-selected SHA1):
-        //
-        //     "actionData": [
-        //       "SHA1",
-        //       "cc8d8a7d1de976bc94f7baba4c24409817f296c1"
-        //     ]
-        //
-        // Matching values (where user input was upper case):
-        //
-        //     "actionData": [
-        //       "SHA1",
-        //       "cc8d8a7d1de976bc94f7baba4c24409817f296c1",
-        //       "CC8D8A7D1DE976BC94F7BABA4C24409817F296C1 = cc8d8a7d1de976bc94f7baba4c24409817f296c1"
-        //     ]
-        //
-        // Non-matching values:
-        //
-        //     "actionData": [
-        //       "SHA1",
-        //       "cc8d8a7d1de976bc94f7baba4c24409817f296c1",
-        //       "d2970bcfa7717d2bdad34ed7a8ac649c ≠ cc8d8a7d1de976bc94f7baba4c24409817f296c1"
-        //     ]
-        collection.calculatedChecksumType = actionResult.actionData?.[0] as ChecksumType;
-        collection.calculatedChecksumValue = actionResult.actionData?.[1];
+  getLastActionResults = async (sessionId: string, step: Step) => {
+    // We may already have loaded the result/link earlier
+    if (step.lastAction && !step.result && !step.downloadUrl) {
+      step.result = undefined;
+      step.downloadUrl = undefined;
+
+      for (const resultFile of step.lastAction.resultFiles) {
+        // Assume at most one JSON result and one download link
+        if (resultFile.endsWith('.json')) {
+          step.result = await this.getActionResult(sessionId, resultFile);
+        } else {
+          step.downloadUrl = this.getActionReportUrl(sessionId, resultFile);
+        }
       }
     }
   };

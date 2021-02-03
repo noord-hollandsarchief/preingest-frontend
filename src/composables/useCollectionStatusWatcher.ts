@@ -1,7 +1,7 @@
 import { Ref } from 'vue';
 import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
-import { Collection, Step } from '@/services/PreingestApiService';
+import { ChecksumType, Collection, Step } from '@/services/PreingestApiService';
 import { formatDateDifference } from '@/utils/formatters';
 
 /**
@@ -91,7 +91,6 @@ export function useCollectionStatusWatcher(
       step.fixedSelected = !step.allowRestart && step.status === 'Success' ? false : undefined;
       step.selected = step.fixedSelected ?? step.selected;
 
-      step.lastAction = lastAction;
       step.lastStart = lastAction?.summary?.start || lastAction?.creation || step.lastStart;
       // TODO validate comment and improve calculation if possible
       // When completed at this point, this may round down a second, which is a bit confusing
@@ -99,16 +98,61 @@ export function useCollectionStatusWatcher(
         ? formatDateDifference(step.lastStart, lastAction?.summary?.end)
         : undefined;
 
-      // Update the last known checksum value (supporting two browser windows for the same session,
-      // and supporting page refresh)
       if (
         (!scheduledAction || scheduledAction.status === 'Done') &&
         lastAction &&
-        lastAction.name === 'ContainerChecksumHandler' &&
-        lastAction.processId !== collection.value.calculatedChecksumProcessId
+        lastAction.processId !== step.lastActionProcessId
       ) {
-        collection.value.calculatedChecksumProcessId = lastAction.processId;
-        await api.getLastCalculatedChecksum(collection.value);
+        step.lastAction = lastAction;
+        step.lastActionProcessId = lastAction.processId;
+
+        switch (lastAction.name) {
+          case 'ContainerChecksumHandler':
+            // Update the last known checksum value (supporting two browser windows for the same
+            // session, and supporting page refresh)
+            // await api.getLastCalculatedChecksum(collection.value);
+            await api.getLastActionResults(collection.value.sessionId, step);
+            // Without user input for expected value (and user-selected SHA1):
+            //
+            //     "actionData": [
+            //       "SHA1",
+            //       "cc8d8a7d1de976bc94f7baba4c24409817f296c1"
+            //     ]
+            //
+            // Matching values (where user input was upper case):
+            //
+            //     "actionData": [
+            //       "SHA1",
+            //       "cc8d8a7d1de976bc94f7baba4c24409817f296c1",
+            //       "CC8D8A7D1DE976BC94F7BABA4C24409817F296C1 = cc8d8a7d1de976bc94f7baba4c24409817f296c1"
+            //     ]
+            //
+            // Non-matching values:
+            //
+            //     "actionData": [
+            //       "SHA1",
+            //       "cc8d8a7d1de976bc94f7baba4c24409817f296c1",
+            //       "d2970bcfa7717d2bdad34ed7a8ac649c ≠ cc8d8a7d1de976bc94f7baba4c24409817f296c1"
+            //     ]
+            collection.value.calculatedChecksumType = step.result?.actionData?.[0] as ChecksumType;
+            collection.value.calculatedChecksumValue = step.result?.actionData?.[1];
+
+            break;
+
+          case 'ExcelCreatorHandler':
+            // Actually, the name of the download is not likely to change; just be future-proof
+            collection.value.excelCreatorDownloadUrl = undefined;
+            // We could also simply construct the URL without fetching the full action results:
+            //   url = api.getActionReportUrl(collection.value.sessionId, step.name + '.xlsx')
+            // ...but let's be future-proof here too:
+            await api.getLastActionResults(collection.value.sessionId, step);
+            collection.value.excelCreatorDownloadUrl = step.downloadUrl;
+            break;
+
+          default:
+            step.result = undefined;
+            step.downloadUrl = undefined;
+        }
       }
     }
   };
