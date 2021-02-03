@@ -9,24 +9,22 @@
         </p>
         <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
         <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
+        <p v-if="collection.settings.checksumValue">
+          Verwachte checksum: {{ checksumType }},
+          {{ collection.settings.checksumValue }}
+        </p>
         <p v-if="collection.calculatedChecksumValue">
           Berekende checksum:
           <span>
-            <!-- TODO show display name -->
             <!-- TODO SHA-512 is far too long to display -->
-            {{ collection.calculatedChecksumType }}, {{ collection.calculatedChecksumValue }}
+            {{ calculatedChecksumType }},
+            {{ collection.calculatedChecksumValue }}
             <Tag v-if="checksumStatus" severity="success">ok</Tag>
             <Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
           </span>
         </p>
-        <p v-if="collection.settings.checksumValue">
-          <!-- TODO show display name -->
-          Verwachte checksum: {{ collection.settings.checksumType }},
-          {{ collection.settings.checksumValue }}
-        </p>
         <p v-if="collection.settings.preservicaSecurityTag">
-          <!-- TODO show display name -->
-          Standaardtoegang: {{ collection.settings.preservicaSecurityTag }}
+          Standaardtoegang: {{ preservicaSecurityTag }}
         </p>
         <p v-if="collection.settings.preservicaTarget">
           Preservica doellocatie: {{ collection.settings.preservicaTarget }}
@@ -270,6 +268,17 @@ export default defineComponent({
           this.collection.settings.checksumValue.trim().toLowerCase() &&
         this.collection.calculatedChecksumType === this.collection.settings.checksumType
       );
+    },
+    calculatedChecksumType(): string | undefined {
+      return checksumTypes.find((t) => t.code === this.collection?.calculatedChecksumType)?.name;
+    },
+    checksumType(): string | undefined {
+      return checksumTypes.find((t) => t.code === this.collection?.settings?.checksumType)?.name;
+    },
+    preservicaSecurityTag(): string | undefined {
+      return securityTagTypes.find(
+        (t) => t.code === this.collection?.settings?.preservicaSecurityTag
+      )?.name;
     },
   },
   watch: {

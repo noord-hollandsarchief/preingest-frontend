@@ -30,11 +30,14 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
   { name: 'SHA-512', code: 'SHA512' },
 ];
 
+/**
+ * The default security tag Preservica will apply when not given in the XIP `<SecurityTag>`.
+ */
 export type SecurityTag = 'open' | 'closed';
 
 export const securityTagTypes: { name: string; code: SecurityTag }[] = [
-  { name: 'Open', code: 'open' },
-  { name: 'Besloten', code: 'closed' },
+  { name: 'openbaar', code: 'open' },
+  { name: 'niet-openbaar', code: 'closed' },
 ];
 
 // In the future this may also need some "Ready for ingest" and "Done" states.
