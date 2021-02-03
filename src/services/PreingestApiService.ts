@@ -239,6 +239,7 @@ export const stepDefinitions: Step[] = [
   {
     id: 'sipcreator',
     dependsOn: ['transform'],
+    requiredSettings: ['preservicaSecurityTag'],
     actionName: 'SipCreatorHandler',
     description: 'Bestanden omzetten naar SIP bestandsformaat',
   },
@@ -254,8 +255,8 @@ export type Settings = {
   description?: string;
   checksumType?: ChecksumType;
   checksumValue?: string;
-  preservicaTarget?: string;
   preservicaSecurityTag?: string;
+  preservicaTarget?: string;
 };
 
 export type SettingsKey = keyof Settings;
