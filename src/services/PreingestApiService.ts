@@ -315,12 +315,12 @@ export type ActionResult = {
 
 export class PreingestApiService {
   private toast = useToast();
-  private baseUrl = process.env.VUE_APP_PREINGEST_API;
+  private baseUrl = process.env.VUE_APP_PREINGEST_API || '/api/';
   private delay = (timeout: number) => new Promise((res) => setTimeout(res, timeout));
 
   private async repeatUntilResult<T>(
     fn: () => Promise<T | undefined>,
-    maxSeconds = process.env.VUE_APP_STEP_MAX_SECONDS
+    maxSeconds = +(process.env.VUE_APP_STEP_MAX_SECONDS || 600)
   ): Promise<T> {
     const startTime = dayjs();
     const endTime = startTime.add(maxSeconds, 's');
@@ -371,7 +371,7 @@ export class PreingestApiService {
 
   // DroidValidationHandler.pdf and so on.
   getActionReportUrl = (sessionId: string, name: string) => {
-    return `${this.baseUrl}/output/report/${sessionId}/${name}`;
+    return `${this.baseUrl}output/report/${sessionId}/${name}`;
   };
 
   /**

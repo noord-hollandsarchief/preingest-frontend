@@ -7,8 +7,11 @@ set -eu
 # to set the defaults:
 export PROXY_API_DEST=${PROXY_API_DEST:-http://host.docker.internal:8000/api/}
 
+export PROXY_EVENTHUB_DEST=${PROXY_EVENTHUB_DEST:-http://host.docker.internal:8000/preingestEventHub/}
+
 # Due to `set -u` this would fail if not defined and no default was set above
 echo "Will proxy requests for /api/* to ${PROXY_API_DEST}*"
+echo "Will proxy requests for /preingestEventHub/* to ${PROXY_EVENTHUB_DEST}*"
 
 # Next, let the original entry point do its work
 /docker-entrypoint.sh "$@"

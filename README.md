@@ -71,9 +71,10 @@ this file](./vue.config.js) in the SCSS of all custom components.
 
 The [Dockerfile](./Dockerfile) creates a temporary (partially cached) build image, builds the
 project, and creates a final image that serves the static result using Nginx. To avoid CORS issues,
-this also [proxies](./docker-nginx.conf) `/api/*` to whatever is set in its environment variable
-`PROXY_API_DEST`. This defaults to `http://host.docker.internal:8000/api/` to delegate to port 8000
-running on your local machine.
+this also [proxies](./docker-nginx.conf) `/api/*` and `/preingestEventHub/*` to whatever is set in
+the environment variables `PROXY_API_DEST` and `PROXY_EVENTHUB_DEST`. These settings default to
+`http://host.docker.internal:8000/api/` and `http://host.docker.internal:8000/preingestEventHub/`
+to delegate to port 8000 running on your local machine.
 
 To build and tag:
 
@@ -81,17 +82,19 @@ To build and tag:
 docker build -t noordhollandsarchief/preingest-frontend:development .
 ```
 
-To run on <http://localhost:9000> and proxy requests for `/api/*` to <http://localhost:8000/api/>:
+To run on <http://localhost:9000>, proxy requests for `/api/*` to <http://localhost:8000/api/> and
+proxy requests for `/preingestEventHub/*` to <http://localhost:8000/preingestEventHub/>:
 
 ```text
 docker run -it -p 9000:80 --rm noordhollandsarchief/preingest-frontend:development
 ```
 
-To proxy to a different port or location, set `PROXY_API_DEST`:
+To proxy to different ports or locations, set `PROXY_API_DEST` and `PROXY_EVENTHUB_DEST`:
 
 ```text
 docker run -it -p 9000:80 --rm \
   --env PROXY_API_DEST=http://host.docker.internal:55004/api/ \
+  --env PROXY_EVENTHUB_DEST=http://host.docker.internal:55004/preingestEventHub/ \
   noordhollandsarchief/preingest-frontend:development
 ```
 
@@ -101,6 +104,7 @@ or use `172.17.0.1` instead of `host.docker.internal`:
 ```text
 docker run -it -p 9000:80 --rm \
   --env PROXY_API_DEST=http://172.17.0.1:8000/api/ \
+  --env PROXY_EVENTHUB_DEST=http://172.17.0.1:8000/preingestEventHub/ \
   noordhollandsarchief/preingest-frontend:development
 ```
 

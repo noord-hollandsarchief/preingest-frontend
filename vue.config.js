@@ -34,6 +34,10 @@ module.exports = {
           target: 'http://localhost:8000',
           changeOrigin: true,
         },
+        '^/preingestEventHub': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+        },
       },
     },
   },
