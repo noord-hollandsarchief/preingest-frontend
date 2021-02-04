@@ -251,7 +251,7 @@ export const stepDefinitions: Step[] = [
     id: 'excelcreator',
     dependsOn: [],
     actionName: 'ExcelCreatorHandler',
-    description: 'Excel rapportage',
+    description: 'Excelrapportage',
   },
 ];
 

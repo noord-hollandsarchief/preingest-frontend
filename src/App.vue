@@ -92,4 +92,8 @@ body {
   margin-bottom: 2rem;
   text-align: left;
 }
+
+.p-datatable {
+  margin: 0 -2rem;
+}
 </style>

@@ -79,15 +79,15 @@
       <Button
         label="Opslaan"
         icon="pi pi-save"
-        class="p-button-success p-mr-2"
+        :class="`p-button-${props.onSaveAndRun ? 'secondary' : 'primary'} p-mr-2`"
         :disabled="settingsDirty && !saving ? null : 'disabled'"
         @click="save"
       />
       <Button
         v-if="props.onSaveAndRun"
-        label="Opslaan en start"
+        label="Opslaan en starten"
         icon="pi pi-play"
-        class="p-button-success p-mr-2"
+        class="p-button-primary p-mr-2"
         :disabled="allRequiredSet() && !saving ? null : 'disabled'"
         @click="saveAndRun"
       />

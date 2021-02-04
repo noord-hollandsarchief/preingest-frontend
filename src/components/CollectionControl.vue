@@ -2,7 +2,6 @@
   <div v-if="collection">
     <div class="collection card">
       <div>
-        <h3>Gegevens</h3>
         <p>Bestandsnaam: {{ collection.name }}</p>
         <p v-if="collection.settings.description">
           Omschrijving: {{ collection.settings.description }}
@@ -12,15 +11,17 @@
         <p v-if="collection.settings.checksumValue">
           Verwachte checksum: {{ checksumType }},
           {{ collection.settings.checksumValue }}
+          &nbsp;<Tag v-if="checksumStatus" severity="success">ok</Tag>
         </p>
-        <p v-if="collection.calculatedChecksumValue">
+        <!-- Only show calculated checksum if different from expected value -->
+        <p v-if="collection.calculatedChecksumValue && !checksumStatus">
           Berekende checksum:
           <span>
             <!-- TODO SHA-512 is far too long to display -->
             {{ calculatedChecksumType }},
             {{ collection.calculatedChecksumValue }}
-            <Tag v-if="checksumStatus" severity="success">ok</Tag>
-            <Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
+            <!-- If okay, then Tag is shown next to expected value instead -->
+            &nbsp;<Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
           </span>
         </p>
         <p v-if="collection.settings.preservicaSecurityTag">
@@ -30,14 +31,6 @@
           Preservica doellocatie: {{ collection.settings.preservicaTarget }}
         </p>
       </div>
-
-      <Button
-        :disabled="collection.overallStatus === 'Running'"
-        label="Instellingen"
-        icon="pi pi-cog"
-        class="p-button-success p-mr-2"
-        @click="editSettings"
-      />
     </div>
 
     <CollectionSettingsDialog
@@ -48,30 +41,6 @@
     />
 
     <div class="card">
-      <h3>Verwerken</h3>
-
-      <Toolbar class="p-mb-4">
-        <template #left>
-          <Button
-            :disabled="!hasSelection || collection.overallStatus === 'Running'"
-            :label="collection.overallStatus === 'Running' ? 'Bezig...' : 'Start'"
-            icon="pi pi-play"
-            class="p-button-success p-mr-2"
-            @click="checkSettingsAndRunSelectedSteps"
-          />
-        </template>
-
-        <template #right>
-          <Button
-            :disabled="!collection.excelCreatorDownloadUrl"
-            label="Rapportage"
-            icon="pi pi-download"
-            class="p-button-help p-mx-2"
-            @click="downloadExcel"
-          />
-        </template>
-      </Toolbar>
-
       <DataTable
         :value="steps"
         :autoLayout="true"
@@ -83,6 +52,35 @@
         class="p-datatable-sm"
         :rowClass="rowClass"
       >
+        <template #header>
+          <div class="p-d-flex datatable-header">
+            <Button
+              :disabled="!hasSelection || collection.overallStatus === 'Running'"
+              :label="collection.overallStatus === 'Running' ? 'Bezig...' : 'Start'"
+              icon="pi pi-play"
+              class="p-button-primary p-as-start p-mr-2"
+              @click="checkSettingsAndRunSelectedSteps"
+            />
+            <div class="p-ml-auto">
+              <Button
+                v-if="collection.excelCreatorDownloadUrl"
+                :disabled="!collection.excelCreatorDownloadUrl"
+                label="Rapportage"
+                icon="pi pi-download"
+                class="p-button-secondary p-as-start p-mr-2"
+                @click="downloadExcel"
+              />
+              <Button
+                :disabled="collection.overallStatus === 'Running'"
+                label="Instellingen"
+                icon="pi pi-cog"
+                class="p-button-secondary p-as-start"
+                @click="editSettings"
+              />
+            </div>
+          </div>
+        </template>
+
         <Column :expander="true" headerStyle="width: 1rem" bodyStyle="padding: 0" />
 
         <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
@@ -275,12 +273,15 @@ export default defineComponent({
         this.collection.calculatedChecksumType === this.collection.settings.checksumType
       );
     },
+
     calculatedChecksumType(): string | undefined {
       return checksumTypes.find((t) => t.code === this.collection?.calculatedChecksumType)?.name;
     },
+
     checksumType(): string | undefined {
       return checksumTypes.find((t) => t.code === this.collection?.settings?.checksumType)?.name;
     },
+
     preservicaSecurityTag(): string | undefined {
       return securityTagTypes.find(
         (t) => t.code === this.collection?.settings?.preservicaSecurityTag
@@ -382,5 +383,9 @@ export default defineComponent({
 ::v-deep(.expander-disabled .p-row-toggler) {
   pointer-events: none;
   opacity: 0.2;
+}
+.datatable-header {
+  padding-left: 1.5rem;
+  padding-right: 0.5rem;
 }
 </style>

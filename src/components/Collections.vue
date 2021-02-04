@@ -10,30 +10,35 @@
       :rowHover="true"
     >
       <template #header>
-        <Button
-          v-if="hasSelection"
-          :disabled="!hasSelection || resetting || deleting"
-          :label="resetting ? 'Bezig...' : 'Wis resultaten'"
-          icon="pi pi-replay"
-          class="p-button-warning p-mr-2"
-          @click="resetCollections"
-        />
-        <Button
-          v-if="hasSelection"
-          :disabled="!hasSelection || resetting || deleting"
-          :label="deleting ? 'Bezig...' : 'Verwijder bestanden'"
-          icon="pi pi-trash"
-          class="p-button-danger p-mr-2"
-          @click="removeCollections"
-        />
-
-        <!-- TODO matching search somehow moves focus to selection checkbox -->
-        <!-- TODO clear search icon -->
-        <span class="p-input-icon-left">
-          <i class="pi pi-search"></i>
-          <!-- This searches in the original data (unless excluded) -->
-          <InputText v-model="filters['global']" placeholder="Zoek" size="50" />
-        </span>
+        <div class="p-d-flex datatable-header">
+          <div>
+            <Button
+              v-if="hasSelection"
+              :disabled="!hasSelection || resetting || deleting"
+              :label="resetting ? 'Bezig...' : 'Wis resultaten'"
+              icon="pi pi-replay"
+              class="p-button-warning p-mr-2"
+              @click="resetCollections"
+            />
+            <Button
+              v-if="hasSelection"
+              :disabled="!hasSelection || resetting || deleting"
+              :label="deleting ? 'Bezig...' : 'Verwijder bestanden'"
+              icon="pi pi-trash"
+              class="p-button-danger p-mr-2"
+              @click="removeCollections"
+            />
+          </div>
+          <div class="p-ml-auto">
+            <!-- TODO matching search somehow moves focus to selection checkbox -->
+            <!-- TODO clear search icon -->
+            <span class="p-input-icon-left">
+              <i class="pi pi-search"></i>
+              <!-- This searches in the original data (unless excluded) -->
+              <InputText v-model="filters['global']" placeholder="Zoek" />
+            </span>
+          </div>
+        </div>
       </template>
 
       <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
