@@ -100,6 +100,7 @@ import { defineComponent, PropType, ref } from 'vue';
 import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
 import {
+  Action,
   checksumTypes,
   Collection,
   securityTagTypes,
@@ -116,6 +117,7 @@ export default defineComponent({
     },
     // collection.settings will be updated when saving
     collection: {
+      // The is actually a reactive value
       type: Object as PropType<Collection>,
       required: true,
     },
@@ -183,7 +185,39 @@ export default defineComponent({
       this.saving = true;
       // eslint-disable-next-line vue/no-mutating-props
       this.collection.settings = this.settings;
-      await this.api.saveSettings(this.collection.sessionId, this.collection.settings);
+
+      // TODO API remove when no longer getting "actionId": "00000000-0000-0000-0000-000000000000"
+      const lastActionId = this.collection.preingest
+        .filter((action: Action) => action.name === 'SettingsHandler')
+        .map((action: Action) => action.processId)
+        .pop();
+
+      const result = await this.api.saveSettings(this.collection.sessionId, this.settings);
+      // TODO API regression: last version does not return the action ID anymore
+      if (result.actionId === '00000000-0000-0000-0000-000000000000') {
+        console.error('Invalid action id', result);
+      }
+
+      // The API handles this like any other action: it reports it has accepted the request but may
+      // not have completed executing it. Ensure it's done before returning; this relies on
+      // `useCollectionStatusWatcher` to update `preingest`.
+      await this.api.repeatUntilResult(async () => {
+        // TODO API refactor when API returns proper GUID again so we can await that
+        const newLastActionId = this.collection.preingest
+          .filter(
+            (action: Action) =>
+              action.name === 'SettingsHandler' && action.actionStatus === 'Success'
+          )
+          .pop()?.processId;
+
+        if (newLastActionId !== lastActionId) {
+          // Done
+          return true;
+        }
+        // Repeat
+        return undefined;
+      });
+
       // Keeping the dialog open until saved also hides a bit of confusion, where the "Start"
       // button may show "Running" due to the collection's `"overallStatus": "running"` while
       // persisting the settings (rather than truly indicating the actions are running).

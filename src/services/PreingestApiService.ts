@@ -318,7 +318,7 @@ export class PreingestApiService {
   private baseUrl = process.env.VUE_APP_PREINGEST_API || '/api/';
   private delay = (timeout: number) => new Promise((res) => setTimeout(res, timeout));
 
-  private async repeatUntilResult<T>(
+  async repeatUntilResult<T>(
     fn: () => Promise<T | undefined>,
     maxSeconds = +(process.env.VUE_APP_STEP_MAX_SECONDS || 600)
   ): Promise<T> {
@@ -395,41 +395,12 @@ export class PreingestApiService {
   };
 
   /**
-   * Save the settings and make sure that the backend has completed doing so.
+   * Save the settings. Note that this does NOT make sure that the backend has completed doing so.
    */
-  saveSettings = async (sessionId: string, settings: Settings): Promise<Action> => {
-    const result = await this.fetchWithDefaults<TriggerActionResult>(
-      `preingest/settings/${sessionId}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify(settings),
-      }
-    );
-
-    // The API handles this like any other action: it reports it has accepted the request but may
-    // not have completed executing it. Ensure it's done before returning.
-    return this.repeatUntilResult(async () => {
-      // We could also rely on `useCollectionStatusWatcher` which will update `preingest`
-      const status = await this.fetchWithDefaults<Action>(`status/action/${result.actionId}`);
-      // Right after triggering save, this may return:
-      //
-      //     {
-      //       "creation": "2021-02-03T08:59:57.5748151+00:00",
-      //       "description": "Save user input setting(s) for folder 1bff9806-4c59-50d5-b761-2bf6cfb18472",
-      //       "sessionId": "1bff9806-4c59-50d5-b761-2bf6cfb18472",
-      //       "name": "SettingsHandler",
-      //       "actionId": "c7bbfff4-9e58-4470-80b8-e4cfdaf62e75",
-      //       "resultFiles": [
-      //         "SettingsHandler.json"
-      //       ],
-      //       "actionStatus": null
-      //     }
-      if (status.actionStatus === 'Success') {
-        // Done; return the results of the action; won't be used
-        return status;
-      }
-      // Repeat
-      return undefined;
+  saveSettings = async (sessionId: string, settings: Settings): Promise<TriggerActionResult> => {
+    return await this.fetchWithDefaults<TriggerActionResult>(`preingest/settings/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(settings),
     });
   };
 
