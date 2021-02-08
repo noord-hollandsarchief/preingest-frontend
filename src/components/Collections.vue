@@ -4,6 +4,7 @@
       :value="collections"
       :autoLayout="true"
       v-model:selection="selectedCollections"
+      dataKey="sessionId"
       :filters="filters"
       sortField="creationTime"
       :sortOrder="1"
@@ -131,10 +132,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, onUnmounted, ref } from 'vue';
 import { useConfirm } from 'primevue/useConfirm';
 import { useToast } from 'primevue/components/toast/useToast';
 import SessionProgress from '@/components/SessionProgress.vue';
+import { useCollectionsWatcher } from '@/composables/useCollectionsWatcher';
 import { useApi } from '@/plugins/PreingestApi';
 import { Collection } from '@/services/PreingestApiService';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
@@ -147,10 +149,18 @@ export default defineComponent({
     const toast = useToast();
     const filters = ref({});
     const multiSortMeta = ref([{ field: 'creationTime', order: 1 }]);
-    const collections = ref<Collection[]>(await api.getCollections());
+    const collections = ref<Collection[] | undefined>();
     const selectedCollections = ref<Collection[]>([]);
     const resetting = ref(false);
     const deleting = ref(false);
+
+    const { startWatcher, stopWatcher } = useCollectionsWatcher(collections);
+    startWatcher();
+    onUnmounted(() => stopWatcher());
+
+    api.getCollections().then(async (c) => {
+      collections.value = c;
+    });
 
     return {
       api,

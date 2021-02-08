@@ -170,7 +170,7 @@ export function useCollectionStatusWatcher(
     const updated = JSON.parse(json);
     if (collection.value?.sessionId === updated.sessionId) {
       if (!process.env.VUE_APP_COLLECTION_POLL_INTERVAL_MS) {
-        // Do not overwrite transient settings such as the calculated checksum
+        // Do not overwrite transient details such as the calculated checksum
         collection.value.overallStatus = updated.overallStatus;
         collection.value.scheduledPlan = updated.scheduledPlan;
         collection.value.preingest = updated.preingest;
