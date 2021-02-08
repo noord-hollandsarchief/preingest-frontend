@@ -243,9 +243,9 @@ export default defineComponent({
 </script>
 
 <style scoped lang="scss">
-::v-deep(.p-dialog) {
-  width: 90%;
-}
+//::v-deep(.p-dialog) {
+//  width: 90%;
+//}
 ::v-deep(.p-dialog),
 ::v-deep(.p-dialog-content) {
   // Ensure the dropdowns don't need a scrollbar

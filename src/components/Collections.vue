@@ -23,7 +23,11 @@
             <Button
               v-if="hasSelection"
               :disabled="!hasSelection || resetting || deleting"
-              :label="deleting ? 'Bezig...' : 'Verwijder bestanden'"
+              :label="
+                deleting
+                  ? 'Bezig...'
+                  : `Verwijder bestand${selectedCollections.length > 1 ? 'en' : ''}`
+              "
               icon="pi pi-trash"
               class="p-button-danger p-mr-2"
               @click="removeCollections"
@@ -195,14 +199,14 @@ export default defineComponent({
             );
           }
 
+          this.collections = await this.api.getCollections();
+          this.deleting = false;
+
           this.toast.add({
             severity: 'info',
             summary: `${count} bestand${count > 1 ? 'en' : ''}  met resultaten verwijderd`,
             life: 5000,
           });
-
-          this.collections = await this.api.getCollections();
-          this.deleting = false;
         },
         reject: () => {
           // User canceled
@@ -238,14 +242,14 @@ export default defineComponent({
             );
           }
 
+          this.collections = await this.api.getCollections();
+          this.resetting = false;
+
           this.toast.add({
             severity: 'info',
             summary: `Resultaten van ${count} bestand${count > 1 ? 'en' : ''} gewist`,
             life: 5000,
           });
-
-          this.collections = await this.api.getCollections();
-          this.resetting = false;
         },
         reject: () => {
           // User canceled

@@ -96,4 +96,8 @@ body {
 .p-datatable {
   margin: 0 -2rem;
 }
+
+.p-dialog {
+  max-width: 90%;
+}
 </style>
