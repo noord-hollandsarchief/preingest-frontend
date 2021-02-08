@@ -170,7 +170,11 @@ export function useCollectionStatusWatcher(
     const updated = JSON.parse(json);
     if (collection.value?.sessionId === updated.sessionId) {
       if (!process.env.VUE_APP_COLLECTION_POLL_INTERVAL_MS) {
-        collection.value = updated;
+        // Do not overwrite transient settings such as the calculated checksum
+        collection.value.overallStatus = updated.overallStatus;
+        collection.value.scheduledPlan = updated.scheduledPlan;
+        collection.value.preingest = updated.preingest;
+        collection.value.settings = updated.settings;
       }
     }
   };

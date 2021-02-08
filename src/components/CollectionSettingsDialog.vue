@@ -194,7 +194,10 @@ export default defineComponent({
       // `useCollectionStatusWatcher` to update `preingest`.
       await this.api.repeatUntilResult(async () => {
         const lastAction = this.collection.preingest
-          .filter((action: Action) => action.processId === result.actionId)
+          .filter(
+            (action: Action) =>
+              action.processId === result.actionId && action.actionStatus !== 'Executing'
+          )
           .pop();
 
         if (lastAction) {
