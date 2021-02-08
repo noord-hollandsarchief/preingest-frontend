@@ -56,11 +56,17 @@ export function useCollectionStatusWatcher(
       );
 
       // If any scheduled step reports Done while its action reports Failed, then the execution
-      // plan will stop, possibly leaving items in Pending state. We could wipe the execution plan,
-      // but that would only happen then when the failure happens while the detail page is open.
+      // plan will stop, possibly leaving successive items in Pending state. Show a warning, if the
+      // detail page is open while running.
       if (
         scheduledAction?.status === 'Done' &&
         lastAction?.actionStatus === 'Failed' &&
+        // To avoid warning multiple times (including on each page load) we could wipe the execution
+        // plan, but that would then only happen when the failure happens while the detail page is
+        // open. So, compare with our local copy which has not been updated by this very watcher yet
+        // (not even on page load, for which it will just be a copy of the definitions, not hydrated
+        // with any specifics yet, hence having `step.status` being undefined).
+        step.status &&
         step.status !== 'Failed'
       ) {
         toast.add({
