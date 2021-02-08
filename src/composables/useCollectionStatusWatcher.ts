@@ -17,7 +17,6 @@ export function useCollectionStatusWatcher(
   const eventHubUrl = process.env.VUE_APP_PREINGEST_EVENTHUB || '/preingestEventHub/';
   const connection = new HubConnectionBuilder().withUrl(eventHubUrl).build();
   let running = false;
-  let lastPoll = 0;
 
   /**
    * Update the collection whenever called (to update any duration of running steps or update some
@@ -26,19 +25,6 @@ export function useCollectionStatusWatcher(
   const update = async () => {
     if (!collection.value) {
       return;
-    }
-
-    // TODO Remove when SignalR works 100%
-    if (process.env.VUE_APP_COLLECTION_POLL_INTERVAL_MS) {
-      if (Date.now() - lastPoll > +(process.env.VUE_APP_COLLECTION_POLL_INTERVAL_MS || 1000)) {
-        // Do not update the full collection itself, to preserve transient details such as the last
-        // checksum and any unsaved user input
-        const fetched = await api.getCollection(collection.value.sessionId);
-        collection.value.overallStatus = fetched.overallStatus;
-        collection.value.scheduledPlan = fetched.scheduledPlan;
-        collection.value.preingest = fetched.preingest;
-        lastPoll = Date.now();
-      }
     }
 
     // TODO similar code in SessionProgress.vue
@@ -169,15 +155,13 @@ export function useCollectionStatusWatcher(
     }
     const updated = JSON.parse(json);
     if (collection.value?.sessionId === updated.sessionId) {
-      if (!process.env.VUE_APP_COLLECTION_POLL_INTERVAL_MS) {
-        // Do not overwrite transient details such as the calculated checksum
-        collection.value.overallStatus = updated.overallStatus;
-        collection.value.scheduledPlan = updated.scheduledPlan;
-        collection.value.preingest = updated.preingest;
-        // TODO remove the need for this default (and likewise in PreingestApiService#getCollection)
-        // The socket may return `"settings": null` but the forms expect an object
-        collection.value.settings = updated.settings || {};
-      }
+      // Do not overwrite transient details such as the calculated checksum
+      collection.value.overallStatus = updated.overallStatus;
+      collection.value.scheduledPlan = updated.scheduledPlan;
+      collection.value.preingest = updated.preingest;
+      // TODO remove the need for this default (and likewise in PreingestApiService#getCollection)
+      // The socket may return `"settings": null` but the forms expect an object
+      collection.value.settings = updated.settings || {};
     }
   };
 
