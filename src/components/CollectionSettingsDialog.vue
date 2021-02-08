@@ -115,7 +115,6 @@ export default defineComponent({
       // where `v-model` is needed to tell the parent component that the dialog closed
       required: false,
     },
-    // collection.settings will be updated when saving
     collection: {
       // The is actually a reactive value
       type: Object as PropType<Collection>,
@@ -181,10 +180,12 @@ export default defineComponent({
       }
     },
 
+    /**
+     * Save the settings in the backend, relying on {@link useCollectionStatusWatcher} to also
+     * update the settings in the collection when done.
+     */
     async save() {
       this.saving = true;
-      // eslint-disable-next-line vue/no-mutating-props
-      this.collection.settings = this.settings;
 
       const result = await this.api.saveSettings(this.collection.sessionId, this.settings);
 
