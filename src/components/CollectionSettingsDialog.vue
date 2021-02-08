@@ -186,31 +186,17 @@ export default defineComponent({
       // eslint-disable-next-line vue/no-mutating-props
       this.collection.settings = this.settings;
 
-      // TODO API remove when no longer getting "actionId": "00000000-0000-0000-0000-000000000000"
-      const lastActionId = this.collection.preingest
-        .filter((action: Action) => action.name === 'SettingsHandler')
-        .map((action: Action) => action.processId)
-        .pop();
-
       const result = await this.api.saveSettings(this.collection.sessionId, this.settings);
-      // TODO API regression: last version does not return the action ID anymore
-      if (result.actionId === '00000000-0000-0000-0000-000000000000') {
-        console.error('Invalid action id', result);
-      }
 
       // The API handles this like any other action: it reports it has accepted the request but may
       // not have completed executing it. Ensure it's done before returning; this relies on
       // `useCollectionStatusWatcher` to update `preingest`.
       await this.api.repeatUntilResult(async () => {
-        // TODO API refactor when API returns proper GUID again so we can await that
-        const newLastActionId = this.collection.preingest
-          .filter(
-            (action: Action) =>
-              action.name === 'SettingsHandler' && action.actionStatus === 'Success'
-          )
-          .pop()?.processId;
+        const lastAction = this.collection.preingest
+          .filter((action: Action) => action.processId === result.actionId)
+          .pop();
 
-        if (newLastActionId !== lastActionId) {
+        if (lastAction) {
           // Done
           return true;
         }

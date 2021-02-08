@@ -163,12 +163,8 @@ export function useCollectionStatusWatcher(
     }
     const updated = JSON.parse(json);
     if (collection.value?.sessionId === updated.sessionId) {
-      // TODO API just replace the full collection if new settings are returned after saveSettings
-      // collection.value = updated;
       if (!process.env.VUE_APP_COLLECTION_POLL_INTERVAL_MS) {
-        collection.value.overallStatus = updated.overallStatus;
-        collection.value.scheduledPlan = updated.scheduledPlan;
-        collection.value.preingest = updated.preingest;
+        collection.value = updated;
       }
     }
   };
