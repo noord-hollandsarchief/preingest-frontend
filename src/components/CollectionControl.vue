@@ -347,7 +347,9 @@ export default defineComponent({
         // The API may already set a value for resultFiles while still running
         'expander-disabled':
           step.status === 'Executing' ||
-          (!step.lastAction?.resultFiles && !step.result && !step.downloadUrl),
+          (!(step.lastAction?.resultFiles && step.lastAction.resultFiles.length > 0) &&
+            !step.result &&
+            !step.downloadUrl),
       };
     },
 
