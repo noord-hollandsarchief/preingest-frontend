@@ -77,7 +77,7 @@
         @click="cancel"
       />
       <Button
-        label="Opslaan"
+        :label="saving && !savingForRun ? 'Bezig...' : 'Opslaan'"
         icon="pi pi-save"
         :class="`p-button-${props.onSaveAndRun ? 'secondary' : 'primary'} p-mr-2`"
         :disabled="settingsDirty && !saving ? null : 'disabled'"
@@ -85,7 +85,7 @@
       />
       <Button
         v-if="props.onSaveAndRun"
-        label="Opslaan en starten"
+        :label="savingForRun ? 'Bezig...' : 'Opslaan en starten'"
         icon="pi pi-play"
         class="p-button-primary p-mr-2"
         :disabled="allRequiredSet() && !saving ? null : 'disabled'"
@@ -135,6 +135,7 @@ export default defineComponent({
     const settings = ref<Settings>({});
     const settingsDirty = ref(false);
     const saving = ref(false);
+    const savingForRun = ref(false);
 
     const json = ref({});
     return {
@@ -148,6 +149,7 @@ export default defineComponent({
       settingsDirty,
       settings,
       saving,
+      savingForRun,
     };
   },
 
@@ -156,6 +158,7 @@ export default defineComponent({
       this.settings = { ...this.collection.settings };
       this.settingsDirty = false;
       this.saving = false;
+      this.savingForRun = false;
     },
 
     close() {
@@ -207,6 +210,7 @@ export default defineComponent({
         // Repeat
         return undefined;
       });
+      this.saving = false;
 
       // Keeping the dialog open until saved also hides a bit of confusion, where the "Start"
       // button may show "Running" due to the collection's `"overallStatus": "running"` while
@@ -215,7 +219,9 @@ export default defineComponent({
     },
 
     async saveAndRun() {
+      this.savingForRun = true;
       await this.save();
+      this.savingForRun = false;
       if (this.props.onSaveAndRun) {
         this.props.onSaveAndRun();
       }
