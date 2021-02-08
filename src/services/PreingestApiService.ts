@@ -359,6 +359,7 @@ export class PreingestApiService {
       throw new Error('No such session ' + sessionId);
     }
 
+    // TODO Remove the need for the default (and likewise in useCollectionStatusWatcher)
     // The API may return `"settings": null` but the forms expect an object
     return { ...collection, settings: collection.settings ?? {} };
   };

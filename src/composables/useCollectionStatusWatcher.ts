@@ -174,7 +174,9 @@ export function useCollectionStatusWatcher(
         collection.value.overallStatus = updated.overallStatus;
         collection.value.scheduledPlan = updated.scheduledPlan;
         collection.value.preingest = updated.preingest;
-        collection.value.settings = updated.settings;
+        // TODO remove the need for this default (and likewise in PreingestApiService#getCollection)
+        // The socket may return `"settings": null` but the forms expect an object
+        collection.value.settings = updated.settings || {};
       }
     }
   };
