@@ -176,8 +176,6 @@ export function useCollectionStatusWatcher(
   };
 
   const connect = async () => {
-    // CollectionStatus is not triggered when settings are saved.
-    // TODO API this only emits when an action has completed, not when it is started
     connection.on('CollectionStatus', handleUpdate);
     await connection.start();
   };
