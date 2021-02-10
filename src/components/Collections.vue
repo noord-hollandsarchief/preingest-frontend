@@ -7,7 +7,7 @@
       dataKey="sessionId"
       :filters="filters"
       sortField="creationTime"
-      :sortOrder="1"
+      :sortOrder="-1"
       :rowHover="true"
     >
       <template #header>
@@ -148,7 +148,6 @@ export default defineComponent({
     const confirm = useConfirm();
     const toast = useToast();
     const filters = ref({});
-    const multiSortMeta = ref([{ field: 'creationTime', order: 1 }]);
     const collections = ref<Collection[] | undefined>();
     const selectedCollections = ref<Collection[]>([]);
     const resetting = ref(false);
@@ -171,7 +170,6 @@ export default defineComponent({
       collections,
       selectedCollections,
       filters,
-      multiSortMeta,
       resetting,
       deleting,
     };
@@ -271,6 +269,7 @@ export default defineComponent({
 </script>
 
 <style scoped lang="scss">
+a,
 a:visited {
   color: inherit;
 }
