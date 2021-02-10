@@ -102,8 +102,7 @@ export function useCollectionStatusWatcher(
           case 'ContainerChecksumHandler':
             // Update the last known checksum value (supporting two browser windows for the same
             // session, and supporting page refresh)
-            // await api.getLastCalculatedChecksum(collection.value);
-            await api.getLastActionResults(collection.value.sessionId, step);
+            await api.refreshLastActionResults(collection.value.sessionId, step);
             // Without user input for expected value (and user-selected SHA1):
             //
             //     "actionData": [
@@ -128,7 +127,6 @@ export function useCollectionStatusWatcher(
             //     ]
             collection.value.calculatedChecksumType = step.result?.actionData?.[0] as ChecksumType;
             collection.value.calculatedChecksumValue = step.result?.actionData?.[1];
-
             break;
 
           case 'ExcelCreatorHandler':
@@ -137,11 +135,15 @@ export function useCollectionStatusWatcher(
             // We could also simply construct the URL without fetching the full action results:
             //   url = api.getActionReportUrl(collection.value.sessionId, step.name + '.xlsx')
             // ...but let's be future-proof here too:
-            await api.getLastActionResults(collection.value.sessionId, step);
+            await api.refreshLastActionResults(collection.value.sessionId, step);
             collection.value.excelCreatorDownloadUrl = step.downloadUrl;
             break;
 
           default:
+            // We could also execute this before the switch-case, but as the TypeScript compiler
+            // does not expect api.refreshLastActionResults to change its `step` parameter, that
+            // would throw a "TS2339: Property 'actionData' does not exist on type 'never'" at us
+            // when trying to use `step.result?.actionData`.
             step.result = undefined;
             step.downloadUrl = undefined;
         }

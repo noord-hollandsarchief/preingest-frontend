@@ -376,7 +376,8 @@ export class PreingestApiService {
   };
 
   /**
-   * Populate the step's JSON result and/or single download link given its {@link Step.lastAction}.
+   * Ensure the given `step`'s JSON result and/or single download link are set using its
+   * {@link Step.lastAction}, or fetch those details if not known yet.
    */
   getLastActionResults = async (sessionId: string, step: Step) => {
     // We may already have loaded the result/link earlier
@@ -393,6 +394,16 @@ export class PreingestApiService {
         }
       }
     }
+  };
+
+  /**
+   * Force (re-)populating the given `step`'s JSON result and/or single download link given its
+   * {@link Step.lastAction}.
+   */
+  refreshLastActionResults = async (sessionId: string, step: Step) => {
+    step.result = undefined;
+    step.downloadUrl = undefined;
+    return this.getLastActionResults(sessionId, step);
   };
 
   /**
