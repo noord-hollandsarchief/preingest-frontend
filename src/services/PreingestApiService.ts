@@ -155,7 +155,9 @@ export const stepDefinitions: Step[] = [
     dependsOn: [],
     requiredSettings: ['checksumType', 'checksumValue'],
     actionName: 'ContainerChecksumHandler',
-    description: 'Checksum berekenen',
+    description: 'Checksum controleren',
+    allowRestart: true,
+    info: 'In de demo kan de checksum meerdere keren berekend worden',
   },
   {
     id: 'unpack',
@@ -168,7 +170,7 @@ export const stepDefinitions: Step[] = [
     dependsOn: ['unpack'],
     actionName: 'ScanVirusValidationHandler',
     description: 'Viruscontrole',
-    // As set in `allowRestart: true` in the CollectionControl component
+    allowRestart: true,
     info: 'In de demo kan de viruscontrole meerdere keren gestart worden',
   },
   {
@@ -196,14 +198,7 @@ export const stepDefinitions: Step[] = [
     dependsOn: ['profiling'],
     // actionName: 'ExportingHandler - Droid CSV report',
     actionName: 'ExportingHandler',
-    description: 'DROID metagegevens exporteren naar CSV',
-  },
-  {
-    id: 'reporting/pdf',
-    dependsOn: ['profiling'],
-    // actionName: 'ReportingHandler - Droid PDF report',
-    actionName: 'ReportingPdfHandler',
-    description: 'DROID metagegevens exporteren naar PDF',
+    description: 'DROID resultaten exporteren naar CSV',
   },
   {
     id: 'reporting/planets',
@@ -211,13 +206,20 @@ export const stepDefinitions: Step[] = [
     // actionName: 'ReportingDroidXmlHandler - Droid XML report',
     // TODO There is also some ReportingDroidXmlHandler :-(
     actionName: 'ReportingPlanetsXmlHandler',
-    description: 'DROID metagegevens exporteren naar XML',
+    description: 'DROID resultaten exporteren naar XML',
+  },
+  {
+    id: 'reporting/pdf',
+    dependsOn: ['profiling'],
+    // actionName: 'ReportingHandler - Droid PDF report',
+    actionName: 'ReportingPdfHandler',
+    description: 'DROID PDF-rapportage',
   },
   {
     id: 'greenlist',
     dependsOn: ['exporting'],
     actionName: 'GreenListHandler',
-    description: 'Controleren of alle bestandstypen aan greenlist voldoen',
+    description: 'Controleren of alle bestandstypen op voorkeurslijst staan',
   },
   {
     id: 'encoding',
@@ -229,29 +231,33 @@ export const stepDefinitions: Step[] = [
     id: 'validate',
     dependsOn: ['unpack'],
     actionName: 'MetadataValidationHandler',
-    description: 'Metadata valideren met XML-schema (XSD) en Schematron',
+    description: 'Metadatabestanden valideren met XML-schema (XSD) en Schematron',
   },
   {
     id: 'transform',
     // If ever running tasks in parallel, then greenlist needs to be run first, if selected
     dependsOn: ['unpack'],
     actionName: 'TransformationHandler',
-    description: 'Metadatabestanden omzetten naar XIP bestandsformaat',
-    info:
-      'Dit verandert de mapinhoud, dus heeft effect op de controle van de greenlist als die pas later wordt uitgevoerd',
+    description: 'Metadatabestanden omzetten van ToPX naar XIP',
+    info: 'Dit verandert de metadata in de sidecarbestanden',
   },
   {
     id: 'sipcreator',
     dependsOn: ['transform'],
     requiredSettings: ['preservicaSecurityTag'],
+    // requiredSettings: ['preservicaTargetType', 'preservicaSecurityTag'],
     actionName: 'SipCreatorHandler',
-    description: 'Bestanden omzetten naar SIP bestandsformaat',
+    description: 'Resultaat exporteren in SIP bestandsformaat',
+    allowRestart: true,
+    info: 'In de demo kan de SIP Creator meerdere keren gestart worden',
   },
   {
     id: 'excelcreator',
     dependsOn: [],
     actionName: 'ExcelCreatorHandler',
     description: 'Excelrapportage',
+    allowRestart: true,
+    info: 'De rapportage kan altijd opnieuw gemaakt worden',
   },
 ];
 

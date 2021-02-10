@@ -201,21 +201,10 @@ export default defineComponent({
       });
     };
 
-    // Action(s) that allow for special handling in the frontend
-    const extendedSteps: Partial<Step>[] = [
-      { id: 'calculate', allowRestart: true },
-      { id: 'virusscan', allowRestart: true },
-      { id: 'sipcreator', allowRestart: true },
-      { id: 'excelcreator', allowRestart: true },
-    ];
-
-    // Copy the definition of the actions into steps
-    const steps = ref<Step[]>(
-      stepDefinitions.map((a) => ({ ...a, ...extendedSteps.find((e) => e.id === a.id) }))
-    );
-
-    // Force `selected` to match `fixSelected`, in case the extension above is not consistent; this
-    // does not also force-select/unselect any dependencies or dependents
+    // Copy the definitions into the steps
+    const steps = ref<Step[]>(stepDefinitions.map((d) => ({ ...d })));
+    // Force `selected` to match `fixSelected`, in case the definition (if any) is not consistent;
+    // this does not also force-select/unselect any dependencies or dependents
     steps.value.forEach((step) => (step.selected = step.fixedSelected ?? step.selected));
     selectedSteps.value = steps.value.filter((step) => step.selected);
 
