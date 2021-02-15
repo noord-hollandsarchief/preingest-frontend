@@ -312,6 +312,7 @@ export default defineComponent({
     // TODO merge the watcher with the following
     // These events are not emitted when using the Select All checkbox
     onStepSelect(event: SelectionEvent) {
+      // TODO do not auto-select steps in error state; especially not the `transform` step
       const dependencies = getDependencies(event.data, this.steps);
       // This triggers the watcher for selectedSteps
       this.selectedSteps = [...new Set([...this.selectedSteps, ...dependencies])];
