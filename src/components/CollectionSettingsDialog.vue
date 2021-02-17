@@ -45,7 +45,7 @@
           />
         </div>
         <div class="p-field p-col-12 p-md-3">
-          <label for="checksumType">Type checksum</label>
+          <label for="checksumType">Type controlegetal</label>
           <Dropdown
             id="checksumType"
             v-model="settings.checksumType"
@@ -58,7 +58,7 @@
           />
         </div>
         <div class="p-field p-col-12 p-md-9">
-          <label for="expectedChecksum">Opgegeven checksum</label>
+          <label for="expectedChecksum">Opgegeven controlegetal</label>
           <InputText
             id="expectedChecksum"
             v-model="settings.checksumValue"

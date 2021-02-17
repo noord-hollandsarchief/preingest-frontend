@@ -11,13 +11,13 @@
         </p>
         <p v-if="collection.settings.owner">Eigenaar: {{ collection.settings.owner }}</p>
         <p v-if="collection.settings.checksumValue">
-          Verwachte checksum: {{ checksumType }},
+          Verwacht controlegetal: {{ checksumType }},
           {{ collection.settings.checksumValue }}
           &nbsp;<Tag v-if="checksumStatus" severity="success">ok</Tag>
         </p>
         <!-- Only show calculated checksum if different from expected value -->
         <p v-if="collection.calculatedChecksumValue && !checksumStatus">
-          Berekende checksum:
+          Berekend controlegetal:
           <span>
             <!-- TODO SHA-512 is far too long to display -->
             {{ calculatedChecksumType }},

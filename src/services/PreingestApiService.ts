@@ -174,9 +174,9 @@ export const stepDefinitions: Step[] = [
     dependsOn: [],
     requiredSettings: ['checksumType', 'checksumValue'],
     actionName: 'ContainerChecksumHandler',
-    description: 'Checksum controleren',
+    description: 'Controlegetal berekenen',
     allowRestart: true,
-    info: 'In de demo kan de checksum meerdere keren berekend worden',
+    info: 'Het controlegetal kan altijd opnieuw worden berekend',
   },
   {
     id: 'unpack',
@@ -190,7 +190,7 @@ export const stepDefinitions: Step[] = [
     actionName: 'ScanVirusValidationHandler',
     description: 'Viruscontrole',
     allowRestart: true,
-    info: 'In de demo kan de viruscontrole meerdere keren gestart worden',
+    info: 'De viruscontrole kan altijd opnieuw worden uitgevoerd',
   },
   {
     id: 'naming',
@@ -259,7 +259,8 @@ export const stepDefinitions: Step[] = [
     requiredSettings: ['owner'],
     actionName: 'TransformationHandler',
     description: 'Metadatabestanden omzetten van ToPX naar XIP',
-    info: 'Dit verandert de metadata in de sidecarbestanden',
+    info:
+      'Dit verandert de metadata in de sidecarbestanden; opnieuw uitvoeren na fouten heeft meestal geen zin',
   },
   {
     id: 'sipcreator',
@@ -277,14 +278,18 @@ export const stepDefinitions: Step[] = [
     actionName: 'SipCreatorHandler',
     description: 'Resultaat exporteren in SIP bestandsformaat',
     allowRestart: true,
-    info: 'In de demo kan de SIP Creator meerdere keren gestart worden',
+    info:
+      'Exporteren naar SIP kan altijd opnieuw worden uitgevoerd, om nieuwe resultaten van eerdere stappen te verwerken',
   },
   {
     id: 'transferagent',
     dependsOn: ['sipcreator'],
     requiredSettings: ['environment'],
     actionName: 'SipZipHandler',
-    description: 'Preservica Transfer Agent',
+    description: 'SIP kopiëren naar Transfer Agent',
+    allowRestart: true,
+    info:
+      'De kopieeractie kan altijd opnieuw worden uitgevoerd, bijvoorbeeld als er een andere e-Depotomgeving (test of productie) ingesteld wordt',
   },
   {
     id: 'excelcreator',
