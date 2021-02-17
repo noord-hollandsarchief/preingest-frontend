@@ -59,7 +59,7 @@
         @row-select="onStepSelect"
         @row-unselect="onStepUnselect"
         @row-expand="onStepExpand"
-        class="p-datatable-sm"
+        :class="`p-datatable-sm ${collection.overallStatus}`"
         :rowClass="rowClass"
       >
         <template #header>
@@ -390,6 +390,8 @@ export default defineComponent({
 </script>
 
 <style scoped lang="scss">
+::v-deep(.Running .p-datatable-thead .p-checkbox),
+::v-deep(.Running .p-selection-column),
 ::v-deep(.selection-disabled .p-selection-column) {
   pointer-events: none;
   opacity: 0.2;
