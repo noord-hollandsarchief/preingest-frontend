@@ -329,17 +329,22 @@ export default defineComponent({
     // TODO merge the watcher with the following
     // These events are not emitted when using the Select All checkbox
     onStepSelect(event: SelectionEvent) {
-      // TODO do not auto-select steps in error state; especially not the `transform` step
-      const dependencies = getDependencies(event.data, this.steps);
+      // Do not auto-select steps that have already been executed (like when in error state, which
+      // should allow for both re-running and ignoring the error, especially for the `transform`
+      // step which may already have changed the source files so cannot be restarted)
+      const dependencies = getDependencies(event.data, this.steps).filter((step) => !step.status);
       // This triggers the watcher for selectedSteps
       this.selectedSteps = [...new Set([...this.selectedSteps, ...dependencies])];
     },
 
     onStepUnselect(event: SelectionEvent) {
-      const dependents = getDependents(event.data, this.steps);
-      this.selectedSteps = this.selectedSteps.filter(
-        (step) => !dependents.some((d) => d.id === step.id)
-      );
+      // Deselect dependents if this very step did not run earlier
+      if (!event.data.status) {
+        const dependents = getDependents(event.data, this.steps);
+        this.selectedSteps = this.selectedSteps.filter(
+          (step) => !dependents.some((d) => d.id === step.id)
+        );
+      }
     },
 
     async onStepExpand(event: RowExpandEvent) {
