@@ -1,6 +1,6 @@
 import { Ref } from 'vue';
 import { useApi } from '@/plugins/PreingestApi';
-import { Collection, SettingsKey, Step } from '@/services/PreingestApiService';
+import { Collection, Settings, SettingsKey, Step } from '@/services/PreingestApiService';
 
 export function useStepsRunner(collection: Ref<Collection | undefined>, steps: Ref<Step[]>) {
   const api = useApi();
@@ -9,19 +9,29 @@ export function useStepsRunner(collection: Ref<Collection | undefined>, steps: R
 
   /**
    * Return a (possibly empty) list of settings that are required for the selected actions, like the
-   * checksum type when calculating the checksum.
+   * checksum type when calculating the checksum. This takes dependent settings into account.
+   *
+   * @param settings values from a settings dialog; if not set the collection's settings are used
    */
-  const requiredSettings = () => {
+  const requiredSettings = (settings?: Settings) => {
     return selectedSteps().reduce((acc, step) => {
       for (const setting of step.requiredSettings || []) {
         acc.push(setting);
+        if (step.dependentSettings) {
+          const value = (settings || collection.value?.settings)?.[setting];
+          const dependent = step.dependentSettings[setting]?.find((s) => s.value === value);
+          if (dependent) {
+            acc = acc.concat(...dependent.requiredSettings);
+          }
+        }
       }
       return acc;
     }, [] as SettingsKey[]);
   };
 
   /**
-   * Return a (possibly empty) list of {@link requiredSettings} that are missing a value.
+   * Return a (possibly empty) list of {@link requiredSettings} that are missing a value in the
+   * collection's settings.
    */
   const missingSettings = () => {
     return requiredSettings().reduce((acc, setting) => {

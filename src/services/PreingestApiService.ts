@@ -17,12 +17,10 @@ import dayjs from 'dayjs';
 import { DependentItem } from '@/utils/dependentList';
 
 export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
-export type JsonMap = { [key: string]: AnyJson };
+export type JsonMap = { [index: string]: AnyJson };
 export type JsonArray = AnyJson[];
 
 export type ChecksumType = 'MD5' | 'SHA1' | 'SHA256' | 'SHA512';
-
-// TODO move elsewhere when trashing NewSessionDialog
 export const checksumTypes: { name: string; code: ChecksumType }[] = [
   { name: 'MD-5', code: 'MD5' },
   { name: 'SHA-1', code: 'SHA1' },
@@ -31,13 +29,33 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
 ];
 
 /**
- * The default security tag Preservica will apply when not given in the XIP `<SecurityTag>`.
+ * The default security tag Preservica will apply when not given in the XIP `<SecurityTag>`. Maps
+ * to the SIP Creator `-securitytag` parameter if not set to `none`.
  */
-export type SecurityTag = 'open' | 'closed';
-
-export const securityTagTypes: { name: string; code: SecurityTag }[] = [
+export type SecurityTag = 'open' | 'closed' | 'none';
+export const securityTags: { name: string; code: SecurityTag }[] = [
   { name: 'openbaar', code: 'open' },
   { name: 'niet-openbaar', code: 'closed' },
+  // To not use the SIP Creator `securitytag` setting at all
+  { name: 'geen', code: 'none' },
+];
+
+/**
+ * The target Preservica environment/instance.
+ */
+export type Environment = 'test' | 'prod';
+export const environments: { name: string; code: Environment }[] = [
+  { name: 'testomgeving', code: 'test' },
+  { name: 'productieomgeving', code: 'prod' },
+];
+
+/**
+ * The target Preservica collection type: a new collection, or an existing one.
+ */
+export type CollectionStatus = 'NEW' | 'SAME';
+export const collectionStatuses: { name: string; code: CollectionStatus }[] = [
+  { name: 'nieuwe collectie', code: 'NEW' },
+  { name: 'bestaande collectie', code: 'SAME' },
 ];
 
 // In the future this may also need some "Ready for ingest" and "Done" states.
@@ -124,6 +142,7 @@ export type Step = DependentItem & {
   info?: string;
   allowRestart?: boolean;
   requiredSettings?: SettingsKey[];
+  dependentSettings?: DependentSettings;
 
   // Transient details.
   // The status as shown in the frontend, which may be no status at all
@@ -237,6 +256,7 @@ export const stepDefinitions: Step[] = [
     id: 'transform',
     // If ever running tasks in parallel, then greenlist needs to be run first, if selected
     dependsOn: ['unpack'],
+    requiredSettings: ['owner'],
     actionName: 'TransformationHandler',
     description: 'Metadatabestanden omzetten van ToPX naar XIP',
     info: 'Dit verandert de metadata in de sidecarbestanden',
@@ -244,12 +264,27 @@ export const stepDefinitions: Step[] = [
   {
     id: 'sipcreator',
     dependsOn: ['transform'],
-    requiredSettings: ['preservicaSecurityTag'],
-    // requiredSettings: ['preservicaTargetType', 'preservicaSecurityTag'],
+    requiredSettings: ['collectionStatus', 'securityTag'],
+    dependentSettings: {
+      collectionStatus: [
+        {
+          value: 'NEW',
+          requiredSettings: ['collectionCode', 'collectionTitle'],
+        },
+        { value: 'SAME', requiredSettings: ['collectionRef'] },
+      ],
+    },
     actionName: 'SipCreatorHandler',
     description: 'Resultaat exporteren in SIP bestandsformaat',
     allowRestart: true,
     info: 'In de demo kan de SIP Creator meerdere keren gestart worden',
+  },
+  {
+    id: 'transferagent',
+    dependsOn: ['sipcreator'],
+    requiredSettings: ['environment'],
+    actionName: 'SipZipHandler',
+    description: 'Preservica Transfer Agent',
   },
   {
     id: 'excelcreator',
@@ -265,11 +300,28 @@ export type Settings = {
   description?: string;
   checksumType?: ChecksumType;
   checksumValue?: string;
-  preservicaSecurityTag?: string;
-  preservicaTarget?: string;
+
+  environment?: Environment;
+  // The owner name, also used as prefix in, e.g., `<SecurityTag>Tag_owner_Publiek</SecurityTag>`
+  owner?: string;
+  securityTag?: SecurityTag;
+  // This may be defined implicitly by other parameters, but for UX we need this anyway
+  collectionStatus?: CollectionStatus;
+  // A reference to an existing collection, for target type SAME
+  collectionRef?: string;
+  // Code and title for a new collection, for target type NEW
+  collectionCode?: string;
+  collectionTitle?: string;
 };
 
 export type SettingsKey = keyof Settings;
+
+/**
+ * Define required dependent settings, given a specific value of a given "parent" setting.
+ */
+export type DependentSettings = {
+  [index in SettingsKey]?: { value: Settings[index]; requiredSettings: SettingsKey[] }[];
+};
 
 export type WorkflowItem = {
   status?: WorkflowItemStatus;

@@ -2,12 +2,14 @@
   <div v-if="collection">
     <div class="collection card">
       <div>
-        <p>Bestandsnaam: {{ collection.name }}</p>
+        <p>
+          Bestand: {{ collection.name }} ({{ formatDateString(collection.creationTime) }},
+          {{ formatFileSize(collection.size) }})
+        </p>
         <p v-if="collection.settings.description">
           Omschrijving: {{ collection.settings.description }}
         </p>
-        <p>Aanmaakdatum: {{ formatDateString(collection.creationTime) }}</p>
-        <p>Bestandsgrootte: {{ formatFileSize(collection.size) }}</p>
+        <p v-if="collection.settings.owner">Eigenaar: {{ collection.settings.owner }}</p>
         <p v-if="collection.settings.checksumValue">
           Verwachte checksum: {{ checksumType }},
           {{ collection.settings.checksumValue }}
@@ -24,11 +26,19 @@
             &nbsp;<Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
           </span>
         </p>
-        <p v-if="collection.settings.preservicaSecurityTag">
-          Standaardtoegang: {{ preservicaSecurityTag }}
-        </p>
-        <p v-if="collection.settings.preservicaTarget">
-          Preservica doellocatie: {{ collection.settings.preservicaTarget }}
+        <p v-if="collection.settings.securityTag">Standaardtoegang: {{ securityTag }}</p>
+        <p v-if="collection.settings.environment || collection.settings.collectionStatus">
+          Doel: {{ [collectionStatus, environment].filter(Boolean).join(' op ') }}
+          <span v-if="collection.settings.collectionStatus === 'SAME'">
+            ({{ collection.settings.collectionRef || 'nog niet ingesteld' }})</span
+          >
+          <span v-if="collection.settings.collectionStatus === 'NEW'">
+            ({{
+              [collection.settings.collectionCode, collection.settings.collectionTitle]
+                .filter(Boolean)
+                .join(', ') || 'nog niet ingesteld'
+            }})</span
+          >
         </p>
       </div>
     </div>
@@ -36,7 +46,7 @@
     <CollectionSettingsDialog
       v-model:visible="showSettings"
       :collection="collection"
-      :required-settings="requiredSettings()"
+      :requiredSettings="requiredSettings"
       :onSaveAndRun="onSaveAndRun"
     />
 
@@ -158,8 +168,10 @@ import {
   Collection,
   Step,
   checksumTypes,
+  collectionStatuses,
+  environments,
+  securityTags,
   stepDefinitions,
-  securityTagTypes,
 } from '@/services/PreingestApiService';
 import { getDependencies, getDependents } from '@/utils/dependentList';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
@@ -228,8 +240,6 @@ export default defineComponent({
 
     return {
       api,
-      checksumTypes,
-      securityTagTypes,
       formatDateString,
       formatFileSize,
       confirm,
@@ -271,10 +281,17 @@ export default defineComponent({
       return checksumTypes.find((t) => t.code === this.collection?.settings?.checksumType)?.name;
     },
 
-    preservicaSecurityTag(): string | undefined {
-      return securityTagTypes.find(
-        (t) => t.code === this.collection?.settings?.preservicaSecurityTag
-      )?.name;
+    environment(): string | undefined {
+      return environments.find((t) => t.code === this.collection?.settings?.environment)?.name;
+    },
+
+    securityTag(): string | undefined {
+      return securityTags.find((t) => t.code === this.collection?.settings?.securityTag)?.name;
+    },
+
+    collectionStatus(): string | undefined {
+      return collectionStatuses.find((t) => t.code === this.collection?.settings?.collectionStatus)
+        ?.name;
     },
   },
   watch: {

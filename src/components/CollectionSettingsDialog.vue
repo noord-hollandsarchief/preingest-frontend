@@ -9,14 +9,39 @@
     <div class="p-text-left">
       <!-- Somehow @change or @input from Dropdown does not bubble up here -->
       <div class="p-fluid p-formgrid p-grid" @input="settingsDirty = true">
-        <div class="p-field p-col-12">
-          <label for="description">Omschrijving</label>
-          <Textarea
-            id="description"
-            v-model="settings.description"
-            :class="settingClass('description')"
-            rows="1"
-            :autoResize="true"
+        <div class="p-field p-col-12 p-md-3">
+          <label for="environment">Omgeving</label>
+          <Dropdown
+            id="environment"
+            v-model="settings.environment"
+            :options="environments"
+            optionLabel="name"
+            optionValue="code"
+            :class="settingClass('environment')"
+            placeholder="maak een keuze"
+            @change="settingsDirty = true"
+          />
+        </div>
+        <div class="p-field p-col-12 p-md-6">
+          <label for="owner">Eigenaar</label>
+          <InputText
+            id="owner"
+            v-model="settings.owner"
+            :class="settingClass('owner')"
+            placeholder="Exacte naam in e-Depot"
+          />
+        </div>
+        <div class="p-field p-col-12 p-md-3">
+          <label for="securityTag">Standaardtoegang</label>
+          <Dropdown
+            id="securityTag"
+            v-model="settings.securityTag"
+            :options="securityTags"
+            optionLabel="name"
+            optionValue="code"
+            :class="settingClass('securityTag')"
+            placeholder="maak een keuze"
+            @change="settingsDirty = true"
           />
         </div>
         <div class="p-field p-col-12 p-md-3">
@@ -28,7 +53,7 @@
             optionLabel="name"
             optionValue="code"
             :class="settingClass('checksumType')"
-            placeholder="Maak een keuze"
+            placeholder="maak een keuze"
             @change="settingsDirty = true"
           />
         </div>
@@ -43,26 +68,58 @@
           />
         </div>
         <div class="p-field p-col-12 p-md-3">
-          <label for="preservicaSecurityTag">Standaardtoegang</label>
+          <label for="collectionStatus">Doelcollectie</label>
           <Dropdown
-            id="preservicaSecurityTag"
-            v-model="settings.preservicaSecurityTag"
-            :options="securityTagTypes"
+            id="collectionStatus"
+            v-model="settings.collectionStatus"
+            :options="collectionStatuses"
             optionLabel="name"
             optionValue="code"
-            :class="settingClass('preservicaSecurityTag')"
-            placeholder="Maak een keuze"
+            :class="settingClass('collectionStatus')"
+            placeholder="maak een keuze"
             @change="settingsDirty = true"
           />
         </div>
-        <div class="p-field p-col-12 p-md-9">
-          <label for="preservicaTarget">Preservica doellocatie</label>
+        <div v-if="!settings.collectionStatus" class="p-col-12 p-md-9"></div>
+        <div v-if="settings.collectionStatus === 'NEW'" class="p-field p-col-12 p-md-3">
+          <label for="collectionCode">Collectiecode</label>
           <InputText
-            id="preservicaTarget"
-            v-model="settings.preservicaTarget"
-            :class="settingClass('preservicaTarget')"
+            id="collectionCode"
+            v-model="settings.collectionCode"
+            :class="settingClass('collectionCode')"
             type="text"
-            placeholder="Optionele GUID van locatie in Preservica"
+            placeholder="Code nieuwe collectie"
+          />
+        </div>
+        <div v-if="settings.collectionStatus === 'NEW'" class="p-field p-col-12 p-md-6">
+          <label for="collectionTitle">Collectienaam</label>
+          <InputText
+            id="collectionTitle"
+            v-model="settings.collectionTitle"
+            :class="settingClass('collectionTitle')"
+            type="text"
+            placeholder="Naam nieuwe collectie"
+          />
+        </div>
+        <div v-if="settings.collectionStatus === 'SAME'" class="p-field p-col-12 p-md-9">
+          <label for="collectionRef">Referentie bestaande collectie</label>
+          <InputText
+            id="collectionRef"
+            v-model="settings.collectionRef"
+            :class="settingClass('collectionRef')"
+            type="text"
+            placeholder="GUID van collectie in e-Depot"
+          />
+        </div>
+        <div class="p-field p-col-12">
+          <label for="description">Omschrijving</label>
+          <!-- TODO fix padding after upgrading PrimeVUE (or remove `description` altogether) -->
+          <Textarea
+            id="description"
+            v-model="settings.description"
+            :class="settingClass('description')"
+            rows="1"
+            :autoResize="true"
           />
         </div>
       </div>
@@ -103,9 +160,11 @@ import {
   Action,
   checksumTypes,
   Collection,
-  securityTagTypes,
+  securityTags,
   Settings,
   SettingsKey,
+  collectionStatuses,
+  environments,
 } from '@/services/PreingestApiService';
 export default defineComponent({
   props: {
@@ -121,7 +180,7 @@ export default defineComponent({
       required: true,
     },
     requiredSettings: {
-      type: Object as PropType<SettingsKey[]>,
+      type: Function as PropType<(settings: Settings) => SettingsKey[]>,
       required: true,
     },
     onSaveAndRun: {
@@ -145,7 +204,9 @@ export default defineComponent({
       toast,
       json,
       checksumTypes,
-      securityTagTypes,
+      collectionStatuses,
+      environments,
+      securityTags,
       settingsDirty,
       settings,
       saving,
@@ -192,6 +253,9 @@ export default defineComponent({
 
       const result = await this.api.saveSettings(this.collection.sessionId, this.settings);
 
+      // TODO trim values
+      // TODO clear values based on NEW/SAME?
+
       // The API handles this like any other action: it reports it has accepted the request but may
       // not have completed executing it. Ensure it's done before returning; this relies on
       // `useCollectionStatusWatcher` to update `preingest`.
@@ -228,11 +292,13 @@ export default defineComponent({
     },
 
     allRequiredSet() {
-      return this.props.requiredSettings.every((setting) => !!this.settings[setting]);
+      return this.props
+        .requiredSettings(this.settings)
+        .every((setting) => !!this.settings[setting]);
     },
 
     settingClass(setting: SettingsKey) {
-      const required = this.props.requiredSettings.find((s) => s === setting);
+      const required = this.props.requiredSettings(this.settings).find((s) => s === setting);
       return {
         required,
         'p-invalid': required && !this.settings[setting],
@@ -243,12 +309,10 @@ export default defineComponent({
 </script>
 
 <style scoped lang="scss">
-//::v-deep(.p-dialog) {
-//  width: 90%;
-//}
+// TODO Remove if we keep description
 ::v-deep(.p-dialog),
 ::v-deep(.p-dialog-content) {
   // Ensure the dropdowns don't need a scrollbar
-  min-height: 350px;
+  // min-height: 350px;
 }
 </style>
