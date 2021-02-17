@@ -251,10 +251,17 @@ export default defineComponent({
     async save() {
       this.saving = true;
 
+      // Though SIP Creator should ignore excessive settings, let's be defensive
+      if (this.settings.collectionStatus === 'NEW') {
+        delete this.settings.collectionRef;
+      } else if (this.settings.collectionStatus === 'SAME') {
+        delete this.settings.collectionCode;
+        delete this.settings.collectionTitle;
+      }
+
       const result = await this.api.saveSettings(this.collection.sessionId, this.settings);
 
       // TODO trim values
-      // TODO clear values based on NEW/SAME?
 
       // The API handles this like any other action: it reports it has accepted the request but may
       // not have completed executing it. Ensure it's done before returning; this relies on
