@@ -55,8 +55,9 @@ export function useStepsRunner(collection: Ref<Collection | undefined>, steps: R
     // Simply schedule in the given order, one by one.
     const workflowSteps = selectedSteps().map((step) => ({
       actionName: step.actionName,
-      continueOnError: true,
-      continueOnFailed: false,
+      startOnError: step.startOnError ?? true,
+      continueOnError: step.continueOnError ?? true,
+      continueOnFailed: step.continueOnFailed ?? false,
     }));
 
     if (workflowSteps.length) {

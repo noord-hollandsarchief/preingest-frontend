@@ -141,6 +141,13 @@ export type Step = DependentItem & {
   // Tooltip help text
   info?: string;
   allowRestart?: boolean;
+  // Whether a scheduled plan should start if any of the previous actions in the same plan reported
+  // an error or failure; default true
+  startOnError?: boolean;
+  // Whether a scheduled plan should continue if a (validation) error was found; default true
+  continueOnError?: boolean;
+  // Whether a scheduled plan should continue if a failure prevented proper execution; default false
+  continueOnFailed?: boolean;
   requiredSettings?: SettingsKey[];
   dependentSettings?: DependentSettings;
 
@@ -282,10 +289,22 @@ export const stepDefinitions: Step[] = [
       'Exporteren naar SIP kan altijd opnieuw worden uitgevoerd, om nieuwe resultaten van eerdere stappen te verwerken',
   },
   {
+    id: 'validatesip',
+    dependsOn: ['sipcreator'],
+    actionName: 'SipZipMetadataValidationHandler',
+    description: 'SIP metadatabestanden controleren',
+    allowRestart: true,
+    info:
+      'De validatie kan altijd opnieuw worden uitgevoerd, omdat dat ook geldt voor exporteren naar SIP',
+  },
+  {
     id: 'transferagent',
     dependsOn: ['sipcreator'],
+    // Do not start if other actions in the same plan reported an error or failure (but allow for
+    // overriding that if (re-)scheduled by itself without the troublesome actions)
+    startOnError: false,
     requiredSettings: ['environment'],
-    actionName: 'SipZipHandler',
+    actionName: 'SipZipCopyHandler',
     description: 'SIP kopiëren naar Transfer Agent',
     allowRestart: true,
     info:
