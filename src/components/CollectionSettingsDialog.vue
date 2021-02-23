@@ -155,6 +155,7 @@
 <script lang="ts">
 import { defineComponent, PropType, ref } from 'vue';
 import { useToast } from 'primevue/components/toast/useToast';
+import { isEqual } from 'lodash-es';
 import { useApi } from '@/plugins/PreingestApi';
 import {
   Action,
@@ -217,7 +218,10 @@ export default defineComponent({
   methods: {
     init() {
       this.settings = { ...this.collection.settings };
-      this.settingsDirty = false;
+      this.settings.environment = this.settings.environment ?? 'test';
+      this.settings.checksumType = this.settings.checksumType ?? 'SHA1';
+      this.settings.collectionStatus = this.settings.collectionStatus ?? 'NEW';
+      this.settingsDirty = !isEqual(this.settings, this.collection.settings);
       this.saving = false;
       this.savingForRun = false;
     },
@@ -307,7 +311,6 @@ export default defineComponent({
     settingClass(setting: SettingsKey) {
       const required = this.props.requiredSettings(this.settings).find((s) => s === setting);
       return {
-        required,
         'p-invalid': required && !this.settings[setting],
       };
     },
