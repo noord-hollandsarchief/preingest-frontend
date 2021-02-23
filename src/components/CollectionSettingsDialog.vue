@@ -8,8 +8,7 @@
     :dismissableMask="true"
   >
     <div class="p-text-left">
-      <!-- Somehow @change or @input from Dropdown does not bubble up here -->
-      <div class="p-fluid p-formgrid p-grid" @input="settingsDirty = true">
+      <div class="p-fluid p-formgrid p-grid">
         <div class="p-field p-col-12 p-md-3">
           <label for="environment">Omgeving</label>
           <Dropdown
@@ -20,7 +19,6 @@
             optionValue="code"
             :class="settingClass('environment')"
             placeholder="maak een keuze"
-            @change="settingsDirty = true"
           />
         </div>
         <div class="p-field p-col-12 p-md-6">
@@ -42,7 +40,6 @@
             optionValue="code"
             :class="settingClass('securityTag')"
             placeholder="maak een keuze"
-            @change="settingsDirty = true"
           />
         </div>
         <div class="p-field p-col-12 p-md-3">
@@ -55,7 +52,6 @@
             optionValue="code"
             :class="settingClass('checksumType')"
             placeholder="maak een keuze"
-            @change="settingsDirty = true"
           />
         </div>
         <div class="p-field p-col-12 p-md-9">
@@ -78,7 +74,6 @@
             optionValue="code"
             :class="settingClass('collectionStatus')"
             placeholder="maak een keuze"
-            @change="settingsDirty = true"
           />
         </div>
         <div v-if="!settings.collectionStatus" class="p-col-12 p-md-9"></div>
@@ -154,7 +149,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, ref } from 'vue';
+import { computed, defineComponent, PropType, ref } from 'vue';
 import { useToast } from 'primevue/components/toast/useToast';
 import { isEqual } from 'lodash-es';
 import { useApi } from '@/plugins/PreingestApi';
@@ -194,17 +189,18 @@ export default defineComponent({
     const toast = useToast();
     const api = useApi();
     const settings = ref<Settings>({});
-    const settingsDirty = ref(false);
     const saving = ref(false);
     const savingForRun = ref(false);
 
-    const json = ref({});
+    const settingsDirty = computed<boolean>(() => {
+      return !isEqual(settings.value, props.collection.settings);
+    });
+
     return {
       props,
       emit,
       api,
       toast,
-      json,
       checksumTypes,
       collectionStatuses,
       environments,
@@ -222,7 +218,6 @@ export default defineComponent({
       this.settings.environment = this.settings.environment ?? 'test';
       this.settings.checksumType = this.settings.checksumType ?? 'SHA1';
       this.settings.collectionStatus = this.settings.collectionStatus ?? 'NEW';
-      this.settingsDirty = !isEqual(this.settings, this.collection.settings);
       this.saving = false;
       this.savingForRun = false;
     },
