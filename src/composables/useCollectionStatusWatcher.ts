@@ -58,7 +58,12 @@ export function useCollectionStatusWatcher(
         toast.add({
           severity: 'error',
           summary: 'Onverwachte fout bij uitvoering',
-          detail: 'Verdere verwerking is afgebroken.',
+          detail:
+            // If the action cannot start on error, then boldly assume that Failed is always caused
+            // by not being allowed to start
+            step.startOnError === false
+              ? `Vanwege eerdere fouten is '${step.description}' niet gestart.`
+              : 'Verdere verwerking is afgebroken.',
         });
       }
 

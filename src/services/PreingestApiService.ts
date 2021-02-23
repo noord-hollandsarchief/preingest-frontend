@@ -308,7 +308,7 @@ export const stepDefinitions: Step[] = [
     description: 'SIP kopiëren naar Transfer Agent',
     allowRestart: true,
     info:
-      'De kopieeractie kan altijd opnieuw worden uitgevoerd, bijvoorbeeld als er een andere e-Depotomgeving (test of productie) ingesteld wordt',
+      'Deze actie krijgt status "mislukt" als eerdere acties in dezelfde selectie fouten rapporteerden. De kopieeractie kan altijd opnieuw worden uitgevoerd, bijvoorbeeld als er een andere e-Depotomgeving (test of productie) ingesteld wordt.',
   },
   {
     id: 'excelcreator',
