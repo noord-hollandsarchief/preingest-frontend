@@ -5,6 +5,7 @@
     @update:visible="setVisible($event)"
     @show="init"
     :modal="true"
+    :dismissableMask="true"
   >
     <div class="p-text-left">
       <!-- Somehow @change or @input from Dropdown does not bubble up here -->
@@ -324,5 +325,10 @@ export default defineComponent({
 ::v-deep(.p-dialog-content) {
   // Ensure the dropdowns don't need a scrollbar
   // min-height: 350px;
+}
+
+.p-dialog-mask.p-component-overlay {
+  // The default 0.4 is quite dark for presentations
+  background-color: rgba(0, 0, 0, 0.1);
 }
 </style>
