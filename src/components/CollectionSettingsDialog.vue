@@ -1,151 +1,157 @@
 <template>
-  <Dialog
-    header="Instellingen"
-    :visible="visible"
-    @update:visible="setVisible($event)"
-    @show="init"
-    :modal="true"
-    :dismissableMask="true"
-  >
-    <div class="p-text-left">
-      <div class="p-fluid p-formgrid p-grid">
-        <div class="p-field p-col-12 p-md-3">
-          <label for="environment">Omgeving</label>
-          <Dropdown
-            id="environment"
-            v-model="settings.environment"
-            :options="environments"
-            optionLabel="name"
-            optionValue="code"
-            :class="settingClass('environment')"
-            placeholder="maak een keuze"
-          />
-        </div>
-        <div class="p-field p-col-12 p-md-6">
-          <label for="owner">Eigenaar</label>
-          <InputText
-            id="owner"
-            v-model="settings.owner"
-            :class="settingClass('owner')"
-            placeholder="Exacte naam in e-Depot"
-          />
-        </div>
-        <div class="p-field p-col-12 p-md-3">
-          <label for="securityTag">Standaardtoegang</label>
-          <Dropdown
-            id="securityTag"
-            v-model="settings.securityTag"
-            :options="securityTags"
-            optionLabel="name"
-            optionValue="code"
-            :class="settingClass('securityTag')"
-            placeholder="maak een keuze"
-          />
-        </div>
-        <div class="p-field p-col-12 p-md-3">
-          <label for="checksumType">Type controlegetal</label>
-          <Dropdown
-            id="checksumType"
-            v-model="settings.checksumType"
-            :options="checksumTypes"
-            optionLabel="name"
-            optionValue="code"
-            :class="settingClass('checksumType')"
-            placeholder="maak een keuze"
-          />
-        </div>
-        <div class="p-field p-col-12 p-md-9">
-          <label for="expectedChecksum">Opgegeven controlegetal</label>
-          <InputText
-            id="expectedChecksum"
-            v-model="settings.checksumValue"
-            :class="settingClass('checksumValue')"
-            type="text"
-            placeholder="De checksum van de zorgdrager"
-          />
-        </div>
-        <div class="p-field p-col-12 p-md-3">
-          <label for="collectionStatus">Doelcollectie</label>
-          <Dropdown
-            id="collectionStatus"
-            v-model="settings.collectionStatus"
-            :options="collectionStatuses"
-            optionLabel="name"
-            optionValue="code"
-            :class="settingClass('collectionStatus')"
-            placeholder="maak een keuze"
-          />
-        </div>
-        <div v-if="!settings.collectionStatus" class="p-col-12 p-md-9"></div>
-        <div v-if="settings.collectionStatus === 'NEW'" class="p-field p-col-12 p-md-3">
-          <label for="collectionCode">Collectiecode</label>
-          <InputText
-            id="collectionCode"
-            v-model="settings.collectionCode"
-            :class="settingClass('collectionCode')"
-            type="text"
-            placeholder="Code nieuwe collectie"
-          />
-        </div>
-        <div v-if="settings.collectionStatus === 'NEW'" class="p-field p-col-12 p-md-6">
-          <label for="collectionTitle">Collectienaam</label>
-          <InputText
-            id="collectionTitle"
-            v-model="settings.collectionTitle"
-            :class="settingClass('collectionTitle')"
-            type="text"
-            placeholder="Naam nieuwe collectie"
-          />
-        </div>
-        <div v-if="settings.collectionStatus === 'SAME'" class="p-field p-col-12 p-md-9">
-          <label for="collectionRef">Referentie bestaande collectie</label>
-          <InputText
-            id="collectionRef"
-            v-model="settings.collectionRef"
-            :class="settingClass('collectionRef')"
-            type="text"
-            placeholder="GUID van collectie in e-Depot"
-          />
-        </div>
-        <div class="p-field p-col-12">
-          <label for="description">Omschrijving</label>
-          <!-- TODO fix padding after upgrading PrimeVUE (or remove `description` altogether) -->
-          <Textarea
-            id="description"
-            v-model="settings.description"
-            :class="settingClass('description')"
-            rows="1"
-            :autoResize="true"
-          />
+  <!-- Dummy form, just to make some browsers (but not Chrome and Safari?) offer autocomplete -->
+  <form onsubmit="return false">
+    <Dialog
+      header="Instellingen"
+      :visible="visible"
+      @update:visible="setVisible($event)"
+      @show="init"
+      :modal="true"
+      :dismissableMask="true"
+    >
+      <div class="p-text-left">
+        <div class="p-fluid p-formgrid p-grid">
+          <div class="p-field p-col-12 p-md-3">
+            <label for="environment">Omgeving</label>
+            <Dropdown
+              id="environment"
+              v-model="settings.environment"
+              :options="environments"
+              optionLabel="name"
+              optionValue="code"
+              :class="settingClass('environment')"
+              placeholder="maak een keuze"
+            />
+          </div>
+          <div class="p-field p-col-12 p-md-6">
+            <label for="owner">Eigenaar</label>
+            <InputText
+              id="owner"
+              v-model="settings.owner"
+              :class="settingClass('owner')"
+              placeholder="Exacte naam in e-Depot"
+            />
+          </div>
+          <div class="p-field p-col-12 p-md-3">
+            <label for="securityTag">Standaardtoegang</label>
+            <Dropdown
+              id="securityTag"
+              v-model="settings.securityTag"
+              :options="securityTags"
+              optionLabel="name"
+              optionValue="code"
+              :class="settingClass('securityTag')"
+              placeholder="maak een keuze"
+            />
+          </div>
+          <div class="p-field p-col-12 p-md-3">
+            <label for="checksumType">Type controlegetal</label>
+            <Dropdown
+              id="checksumType"
+              v-model="settings.checksumType"
+              :options="checksumTypes"
+              optionLabel="name"
+              optionValue="code"
+              :class="settingClass('checksumType')"
+              placeholder="maak een keuze"
+            />
+          </div>
+          <div class="p-field p-col-12 p-md-9">
+            <label for="expectedChecksum">Opgegeven controlegetal</label>
+            <InputText
+              id="expectedChecksum"
+              v-model="settings.checksumValue"
+              :class="settingClass('checksumValue')"
+              type="text"
+              placeholder="De checksum van de zorgdrager"
+            />
+          </div>
+          <div class="p-field p-col-12 p-md-3">
+            <label for="collectionStatus">Doelcollectie</label>
+            <Dropdown
+              id="collectionStatus"
+              v-model="settings.collectionStatus"
+              :options="collectionStatuses"
+              optionLabel="name"
+              optionValue="code"
+              :class="settingClass('collectionStatus')"
+              placeholder="maak een keuze"
+            />
+          </div>
+          <div v-if="!settings.collectionStatus" class="p-col-12 p-md-9"></div>
+          <div v-if="settings.collectionStatus === 'NEW'" class="p-field p-col-12 p-md-3">
+            <label for="collectionCode">Collectiecode</label>
+            <InputText
+              id="collectionCode"
+              v-model="settings.collectionCode"
+              :class="settingClass('collectionCode')"
+              type="text"
+              placeholder="Code bronsysteem"
+            />
+          </div>
+          <div v-if="settings.collectionStatus === 'NEW'" class="p-field p-col-12 p-md-6">
+            <label for="collectionTitle">Collectienaam (bronsysteem)</label>
+            <InputText
+              id="collectionTitle"
+              v-model="settings.collectionTitle"
+              :class="settingClass('collectionTitle')"
+              type="text"
+              placeholder="Naam bronsysteem"
+            />
+          </div>
+          <div v-if="settings.collectionStatus === 'SAME'" class="p-field p-col-12 p-md-9">
+            <label for="collectionRef">Referentie bestaande collectie</label>
+            <InputText
+              id="collectionRef"
+              v-model="settings.collectionRef"
+              :class="settingClass('collectionRef')"
+              type="text"
+              placeholder="GUID van collectie in e-Depot"
+            />
+          </div>
+          <div class="p-field p-col-12">
+            <label for="description">Omschrijving</label>
+            <!-- TODO fix padding after upgrading PrimeVUE (or remove `description` altogether) -->
+            <Textarea
+              id="description"
+              v-model="settings.description"
+              :class="settingClass('description')"
+              rows="1"
+              :autoResize="true"
+            />
+          </div>
         </div>
       </div>
-    </div>
 
-    <template #footer>
-      <Button
-        label="Annuleren"
-        icon="pi pi-times"
-        class="p-button-text"
-        :disabled="!saving ? null : 'disabled'"
-        @click="cancel"
-      />
-      <Button
-        :label="saving && !savingForRun ? 'Bezig...' : 'Opslaan'"
-        icon="pi pi-save"
-        :class="`p-button-${props.onSaveAndRun ? 'secondary' : 'primary'} p-mr-2`"
-        :disabled="settingsDirty && !saving ? null : 'disabled'"
-        @click="save"
-      />
-      <Button
-        v-if="props.onSaveAndRun"
-        :label="savingForRun ? 'Bezig...' : 'Opslaan en starten'"
-        icon="pi pi-play"
-        class="p-button-primary p-mr-2"
-        :disabled="allRequiredSet() && !saving ? null : 'disabled'"
-        @click="saveAndRun"
-      />
-    </template>
-  </Dialog>
+      <template #footer>
+        <Button
+          label="Annuleren"
+          icon="pi pi-times"
+          class="p-button-text"
+          :disabled="!saving ? null : 'disabled'"
+          @click="cancel"
+        />
+        <!-- Even though <button> defaults to type="submit", Firefox needs it to offer autocomplete -->
+        <Button
+          type="submit"
+          :label="saving && !savingForRun ? 'Bezig...' : 'Opslaan'"
+          icon="pi pi-save"
+          :class="`p-button-${props.onSaveAndRun ? 'secondary' : 'primary'} p-mr-2`"
+          :disabled="settingsDirty && !saving ? null : 'disabled'"
+          @click="save"
+        />
+        <Button
+          type="submit"
+          v-if="props.onSaveAndRun"
+          :label="savingForRun ? 'Bezig...' : 'Opslaan en starten'"
+          icon="pi pi-play"
+          class="p-button-primary p-mr-2"
+          :disabled="allRequiredSet() && !saving ? null : 'disabled'"
+          @click="saveAndRun"
+        />
+      </template>
+    </Dialog>
+  </form>
 </template>
 
 <script lang="ts">
