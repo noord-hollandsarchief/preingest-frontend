@@ -59,7 +59,8 @@ export default defineComponent({
 <style scoped lang="scss">
 .progress {
   cursor: default;
-  font-size: 1.1vw;
+  font-family: Arial, serif;
+  font-size: 1.6vw;
 }
 .executing {
   color: $infoButtonBg;
@@ -74,6 +75,6 @@ export default defineComponent({
   color: $dangerButtonBg;
 }
 .none {
-  color: gray;
+  color: lightgray;
 }
 </style>
