@@ -173,6 +173,7 @@ export function useCollectionStatusWatcher(
   };
 
   const connect = async () => {
+    // TODO reconnect if disconnected
     connection.on('CollectionStatus', handleUpdate);
     await connection.start();
   };

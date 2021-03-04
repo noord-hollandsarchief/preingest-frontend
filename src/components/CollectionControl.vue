@@ -22,6 +22,7 @@
             <!-- TODO SHA-512 is far too long to display -->
             {{ calculatedChecksumType }},
             {{ collection.calculatedChecksumValue }}
+            <!-- TODO this comment or something else somehow yields trailing whitespace when copy/pasting checksum -->
             <!-- If okay, then Tag is shown next to expected value instead -->
             &nbsp;<Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
           </span>
