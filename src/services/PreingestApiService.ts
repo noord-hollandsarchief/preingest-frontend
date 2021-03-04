@@ -298,6 +298,14 @@ export const stepDefinitions: Step[] = [
       'De validatie kan altijd opnieuw worden uitgevoerd, omdat dat ook geldt voor exporteren naar SIP',
   },
   {
+    id: 'excelcreator',
+    dependsOn: [],
+    actionName: 'ExcelCreatorHandler',
+    description: 'Excelrapportage',
+    allowRestart: true,
+    info: 'De rapportage kan altijd opnieuw gemaakt worden',
+  },
+  {
     id: 'transferagent',
     dependsOn: ['sipcreator'],
     // Do not start if other actions in the same plan reported an error or failure (but allow for
@@ -309,14 +317,6 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info:
       'Deze actie krijgt status "mislukt" als eerdere acties in dezelfde selectie fouten rapporteerden. De kopieeractie kan altijd opnieuw worden uitgevoerd, bijvoorbeeld als er een andere e-Depotomgeving (test of productie) ingesteld wordt.',
-  },
-  {
-    id: 'excelcreator',
-    dependsOn: [],
-    actionName: 'ExcelCreatorHandler',
-    description: 'Excelrapportage',
-    allowRestart: true,
-    info: 'De rapportage kan altijd opnieuw gemaakt worden',
   },
 ];
 
