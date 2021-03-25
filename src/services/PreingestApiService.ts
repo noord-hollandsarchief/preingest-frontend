@@ -262,7 +262,7 @@ export const stepDefinitions: Step[] = [
     id: 'transform',
     // If ever running tasks in parallel, then greenlist needs to be run first, if selected
     dependsOn: ['unpack'],
-    requiredSettings: ['owner'],
+    requiredSettings: ['owner', 'securityTag'],
     actionName: 'TransformationHandler',
     description: 'Metadatabestanden omzetten van ToPX naar XIP',
     info:
@@ -271,7 +271,7 @@ export const stepDefinitions: Step[] = [
   {
     id: 'sipcreator',
     dependsOn: ['transform'],
-    requiredSettings: ['collectionStatus', 'securityTag'],
+    requiredSettings: ['collectionStatus'],
     dependentSettings: {
       collectionStatus: [
         {
