@@ -29,15 +29,14 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
 ];
 
 /**
- * The default security tag Preservica will apply when not given in the XIP `<SecurityTag>`. Maps
- * to the SIP Creator `-securitytag` parameter if not set to `none`.
+ * The default security tag the ToPX transformation will apply when not given in the ToPX
+ * `<gebruiksrechten><omschrijvingVoorwaarden>...</omschrijvingVoorwaarden></gebruiksrechten>`
  */
-export type SecurityTag = 'open' | 'closed' | 'none';
+export type SecurityTag = 'publiek' | 'publiek_metadata' | 'intern';
 export const securityTags: { name: string; code: SecurityTag }[] = [
-  { name: 'openbaar', code: 'open' },
-  { name: 'niet-openbaar', code: 'closed' },
-  // To not use the SIP Creator `securitytag` setting at all
-  { name: 'geen', code: 'none' },
+  { name: 'publiek', code: 'publiek' },
+  { name: 'alleen metadata', code: 'publiek_metadata' },
+  { name: 'intern', code: 'intern' },
 ];
 
 /**
