@@ -30,13 +30,16 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
 
 /**
  * The default security tag the ToPX transformation will apply when not given in the ToPX
- * `<gebruiksrechten><omschrijvingVoorwaarden>...</omschrijvingVoorwaarden></gebruiksrechten>`
+ * `<gebruiksrechten><omschrijvingVoorwaarden>...</omschrijvingVoorwaarden></gebruiksrechten>`.
+ * The Preservica defaults will be used as is, the others will be prefixed with `Tag_<owner>_`.
  */
-export type SecurityTag = 'publiek' | 'publiek_metadata' | 'intern';
+export type SecurityTag = 'publiek' | 'publiek_metadata' | 'intern' | 'open' | 'closed';
 export const securityTags: { name: string; code: SecurityTag }[] = [
   { name: 'publiek', code: 'publiek' },
   { name: 'alleen metadata', code: 'publiek_metadata' },
   { name: 'intern', code: 'intern' },
+  { name: 'Preservica open', code: 'open' },
+  { name: 'Preservica closed', code: 'closed' },
 ];
 
 /**
@@ -260,8 +263,8 @@ export const stepDefinitions: Step[] = [
   },
   {
     id: 'transform',
-    // If ever running tasks in parallel, then greenlist needs to be run first, if selected
     dependsOn: ['unpack'],
+    // Actually, `owner` is not needed when `securityTag` is Preservica's `open` or `closed`
     requiredSettings: ['owner', 'securityTag'],
     actionName: 'TransformationHandler',
     description: 'Metadatabestanden omzetten van ToPX naar XIP',
