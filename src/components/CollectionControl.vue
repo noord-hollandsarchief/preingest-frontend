@@ -64,7 +64,7 @@
         :rowClass="rowClass"
       >
         <template #header>
-          <div class="p-d-flex datatable-header">
+          <div class="p-d-flex p-ai-center datatable-header">
             <Button
               :disabled="!hasSelection || collection.overallStatus === 'Running'"
               :label="collection.overallStatus === 'Running' ? 'Bezig...' : 'Start'"
@@ -72,6 +72,13 @@
               class="p-button-primary p-as-start p-mr-2"
               @click="checkSettingsAndRunSelectedSteps"
             />
+            <Tag
+              v-if="collection.settings.environment === 'prod'"
+              p-ml-2
+              style="height: revert"
+              severity="warning"
+              >productie</Tag
+            >
             <div class="p-ml-auto">
               <Button
                 v-if="collection.excelCreatorDownloadUrl"

@@ -12,7 +12,10 @@
       <div class="p-text-left">
         <div class="p-fluid p-formgrid p-grid">
           <div class="p-field p-col-12 p-md-3">
-            <label for="environment">Omgeving</label>
+            <label for="environment"
+              >Omgeving
+              <Tag v-if="settings.environment === 'prod'" severity="warning">productie</Tag>
+            </label>
             <Dropdown
               id="environment"
               v-model="settings.environment"
@@ -145,7 +148,9 @@
           v-if="props.onSaveAndRun"
           :label="savingForRun ? 'Bezig...' : 'Opslaan en starten'"
           icon="pi pi-play"
-          class="p-button-primary p-mr-2"
+          :class="`${
+            settings.environment === 'prod' ? 'p-button-warning' : 'p-button-primary'
+          } p-mr-2`"
           :disabled="allRequiredSet() && !saving ? null : 'disabled'"
           @click="saveAndRun"
         />
