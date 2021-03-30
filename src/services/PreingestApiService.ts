@@ -30,16 +30,18 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
 
 /**
  * The default security tag the ToPX transformation will apply when not given in the ToPX
- * `<gebruiksrechten><omschrijvingVoorwaarden>...</omschrijvingVoorwaarden></gebruiksrechten>`.
- * The Preservica defaults will be used as is, the others will be prefixed with `Tag_<owner>_`.
+ * `<gebruiksrechten><omschrijvingVoorwaarden>...</omschrijvingVoorwaarden></gebruiksrechten>`,
+ * or when forcefully setting it to default Preservica tags. The Preservica defaults will be used
+ * as is (and will even be used when the ToPX supplies other values). The others will only be used
+ * when nothing is specified, and are prefixed with `Tag_<owner>_`.
  */
 export type SecurityTag = 'publiek' | 'publiek_metadata' | 'intern' | 'open' | 'closed';
 export const securityTags: { name: string; code: SecurityTag }[] = [
   { name: 'publiek', code: 'publiek' },
   { name: 'alleen metadata', code: 'publiek_metadata' },
   { name: 'intern', code: 'intern' },
-  { name: 'Preservica open', code: 'open' },
-  { name: 'Preservica closed', code: 'closed' },
+  { name: 'forceer Preservica open', code: 'open' },
+  { name: 'forceer Preservica closed', code: 'closed' },
 ];
 
 /**
