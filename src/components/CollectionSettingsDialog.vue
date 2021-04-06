@@ -26,13 +26,13 @@
               placeholder="maak een keuze"
             />
           </div>
-          <div class="p-field p-col-12 p-md-6">
+          <div class="p-field p-col-12 p-md-3">
             <label for="owner">Eigenaar</label>
             <InputText
               id="owner"
               v-model="settings.owner"
               :class="settingClass('owner')"
-              placeholder="Exacte naam in e-Depot"
+              placeholder="Afkorting in e-Depot"
             />
           </div>
           <div class="p-field p-col-12 p-md-3">
@@ -45,6 +45,15 @@
               optionValue="code"
               :class="settingClass('securityTag')"
               placeholder="maak een keuze"
+            />
+          </div>
+          <div class="p-field p-col-12 p-md-3">
+            <label for="owner">Voorbewerking</label>
+            <InputText
+              id="prewash"
+              v-model="settings.prewash"
+              :class="settingClass('prewash')"
+              placeholder="Script zonder extensie"
             />
           </div>
           <div class="p-field p-col-12 p-md-3">

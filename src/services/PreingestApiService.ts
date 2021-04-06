@@ -204,6 +204,13 @@ export const stepDefinitions: Step[] = [
     info: 'De viruscontrole kan altijd opnieuw worden uitgevoerd',
   },
   {
+    id: 'prewash',
+    dependsOn: ['unpack'],
+    requiredSettings: ['prewash'],
+    actionName: 'PrewashHandler',
+    description: 'Voorbewerking',
+  },
+  {
     id: 'naming',
     dependsOn: ['unpack'],
     actionName: 'NamingValidationHandler',
@@ -328,7 +335,8 @@ export type Settings = {
   description?: string;
   checksumType?: ChecksumType;
   checksumValue?: string;
-
+  // The name of the optional pre-wash XSLT script, without any extension
+  prewash?: string;
   environment?: Environment;
   // The owner name, also used as prefix in, e.g., `<SecurityTag>Tag_owner_Publiek</SecurityTag>`
   owner?: string;
