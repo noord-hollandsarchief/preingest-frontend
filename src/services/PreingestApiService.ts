@@ -209,6 +209,9 @@ export const stepDefinitions: Step[] = [
     requiredSettings: ['prewash'],
     actionName: 'PrewashHandler',
     description: 'Voorbewerking',
+    allowRestart: true,
+    info:
+      'De voorbewerking kan altijd opnieuw worden uitgevoerd, ook met verschillende instellingen',
   },
   {
     id: 'naming',
