@@ -48,12 +48,16 @@
             />
           </div>
           <div class="p-field p-col-12 p-md-3">
-            <label for="owner">Voorbewerking</label>
-            <InputText
+            <label for="prewash">Voorbewerking</label>
+            <Dropdown
               id="prewash"
               v-model="settings.prewash"
+              :options="prewashStylesheets"
+              :filter="true"
+              filterPlaceholder="zoek script"
               :class="settingClass('prewash')"
-              placeholder="Script zonder extensie"
+              placeholder="maak een keuze"
+              :showClear="true"
             />
           </div>
           <div class="p-field p-col-12 p-md-3">
@@ -211,6 +215,7 @@ export default defineComponent({
     const settings = ref<Settings>({});
     const saving = ref(false);
     const savingForRun = ref(false);
+    const prewashStylesheets = ref<string[]>([]);
 
     const settingsDirty = computed<boolean>(() => {
       return !isEqual(settings.value, props.collection.settings);
@@ -225,6 +230,7 @@ export default defineComponent({
       collectionStatuses,
       environments,
       securityTags,
+      prewashStylesheets,
       settingsDirty,
       settings,
       saving,
@@ -240,6 +246,9 @@ export default defineComponent({
       this.settings.collectionStatus = this.settings.collectionStatus ?? 'NEW';
       this.saving = false;
       this.savingForRun = false;
+      this.api.getPrewashStylesheets().then((stylesheets) => {
+        this.prewashStylesheets = stylesheets;
+      });
     },
 
     close() {

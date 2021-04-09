@@ -211,7 +211,7 @@ export const stepDefinitions: Step[] = [
     description: 'Voorbewerking',
     allowRestart: true,
     info:
-      'De voorbewerking kan altijd opnieuw worden uitgevoerd, ook met verschillende instellingen',
+      'De voorbewerking kan meerdere keren worden uitgevoerd, bijvoorbeeld met verschillende instellingen',
   },
   {
     id: 'naming',
@@ -272,6 +272,9 @@ export const stepDefinitions: Step[] = [
     dependsOn: ['unpack'],
     actionName: 'MetadataValidationHandler',
     description: 'Metadatabestanden valideren met XML-schema (XSD) en Schematron',
+    allowRestart: true,
+    info:
+      'Deze controle kan meerdere keren worden uitgevoerd, bijvoorbeeld na uitvoeren van voorbewerkingen',
   },
   {
     id: 'transform',
@@ -414,6 +417,7 @@ export class PreingestApiService {
   private toast = useToast();
   private baseUrl = process.env.VUE_APP_PREINGEST_API || '/api/';
   private delay = (timeout: number) => new Promise((res) => setTimeout(res, timeout));
+  private prewashStylesheets: string[] = [];
 
   async repeatUntilResult<T>(
     fn: () => Promise<T | undefined>,
@@ -523,6 +527,23 @@ export class PreingestApiService {
     await this.fetchWithDefaults<TriggerActionResult>(`Status/remove/${sessionId}`, {
       method: 'DELETE',
     });
+  };
+
+  /**
+   * Get a sorted list of XSLT stylesheets available on the server for use in pre-wash transformations.
+   */
+  getPrewashStylesheets = async (): Promise<string[]> => {
+    if (!this.prewashStylesheets.length) {
+      // This may include non-XSLT files like `Thumbs.db` or `.DS_Store`, and helper transformations
+      // starting with an underscore, most typically `_prewash-identity-transform.xslt`.
+      this.prewashStylesheets = (
+        await this.fetchWithDefaults<{ filename: string; name: string }[]>('output/prewashlist')
+      )
+        .filter((file) => file.filename.match(/^[^_].+\.xslt$/i))
+        .map((file) => file.filename.replace(/\.xslt$/i, ''))
+        .sort();
+    }
+    return this.prewashStylesheets;
   };
 
   /**
