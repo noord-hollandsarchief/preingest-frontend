@@ -34,6 +34,8 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
  * or when forcefully setting it to default Preservica tags. The Preservica defaults will be used
  * as is (and will even be used when the ToPX supplies other values). The others will only be used
  * when nothing is specified, and are prefixed with `Tag_<owner>_`.
+ *
+ * NOTE: when changing, see also `dependentSettings` in step `transform` of {@link stepDefinitions}.
  */
 export type SecurityTag = 'publiek' | 'publiek_metadata' | 'intern' | 'open' | 'closed';
 export const securityTags: { name: string; code: SecurityTag }[] = [
@@ -154,6 +156,9 @@ export type Step = DependentItem & {
   continueOnFailed?: boolean;
   requiredSettings?: SettingsKey[];
   dependentSettings?: DependentSettings;
+  // Steps that can no longer be executed when this step has been executed successfully, even if
+  // they have allowRestart enabled
+  lockSteps?: string[];
 
   // Transient details.
   // The status as shown in the frontend, which may be no status at all
@@ -165,10 +170,9 @@ export type Step = DependentItem & {
   lastDuration?: string;
   // The initial or current selection state
   selected?: boolean;
-  /**
-   * A fixed value for selected (`false` forces the step to always be non-selected), typically set
-   * to `false` when a step has completed unless `allowRestart` is enabled.
-   */
+  // A fixed value for `selected` (`false` forces the step to always be non-selected), typically set
+  // to `false` when a step has completed successfully but does not have `allowRestart` enabled or
+  // explicitly has `lockSteps` defined
   fixedSelected?: boolean;
   result?: ActionResult;
   downloadUrl?: string;
@@ -211,7 +215,7 @@ export const stepDefinitions: Step[] = [
     description: 'Voorbewerking',
     allowRestart: true,
     info:
-      'De voorbewerking kan meerdere keren worden uitgevoerd, bijvoorbeeld met verschillende instellingen',
+      'Zolang ToPX niet is omgezet naar XIP kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
   },
   {
     id: 'naming',
@@ -279,40 +283,40 @@ export const stepDefinitions: Step[] = [
   {
     id: 'transform',
     dependsOn: ['unpack'],
-    // Actually, `owner` is not needed when `securityTag` is Preservica's `open` or `closed`
-    requiredSettings: ['owner', 'securityTag'],
+    // Prohibit the optional pre-wash once this step succeeds
+    lockSteps: ['prewash'],
+    requiredSettings: ['collectionStatus', 'securityTag'],
+    dependentSettings: {
+      collectionStatus: [{ value: 'SAME', requiredSettings: ['collectionRef'] }],
+      securityTag: [
+        // `owner` is not needed when `securityTag` is Preservica's `open` or `closed`
+        { value: 'publiek', requiredSettings: ['owner'] },
+        { value: 'publiek_metadata', requiredSettings: ['owner'] },
+        { value: 'intern', requiredSettings: ['owner'] },
+      ],
+    },
     actionName: 'TransformationHandler',
     description: 'Metadatabestanden omzetten van ToPX naar XIP',
     info:
-      'Dit verandert de metadata in de sidecarbestanden; opnieuw uitvoeren na fouten heeft meestal geen zin',
+      'Voor nieuwe collecties worden naam en code uit ToPX gekopieerd en een ref toegevoegd bij omzetten naar Preservica SIP formaat. Voor bestaande collecties is de ref afhankelijk van de environment. En dit verandert de metadata in de sidecarbestanden; ook na fouten heeft opnieuw uitvoeren meestal geen zin.',
   },
   {
     id: 'sipcreator',
     dependsOn: ['transform'],
-    requiredSettings: ['collectionStatus'],
-    dependentSettings: {
-      collectionStatus: [
-        {
-          value: 'NEW',
-          requiredSettings: ['collectionCode', 'collectionTitle'],
-        },
-        { value: 'SAME', requiredSettings: ['collectionRef'] },
-      ],
-    },
+    // We don't really require `environment` at this point, but for status = NEW this will generate
+    // a unique value for CollectionRef which does not support re-ingesting on a tenant/environment
+    // on the same cloud instance. So, setting requiredSettings here allows for setting allowRestart
+    // on SipZipCopyHandler, but only to repeat the copy action to the very same environment in case
+    // transfer somehow failed.
+    requiredSettings: ['environment'],
     actionName: 'SipCreatorHandler',
-    description: 'Resultaat exporteren in SIP bestandsformaat',
-    allowRestart: true,
-    info:
-      'Exporteren naar SIP kan altijd opnieuw worden uitgevoerd, om nieuwe resultaten van eerdere stappen te verwerken',
+    description: 'Resultaat exporteren in Preservica SIP bestandsformaat',
   },
   {
     id: 'validatesip',
     dependsOn: ['sipcreator'],
     actionName: 'SipZipMetadataValidationHandler',
-    description: 'SIP metadatabestanden controleren',
-    allowRestart: true,
-    info:
-      'De validatie kan altijd opnieuw worden uitgevoerd, omdat dat ook geldt voor exporteren naar SIP',
+    description: 'Preservica SIP metadatabestanden controleren',
   },
   {
     id: 'excelcreator',
@@ -328,12 +332,12 @@ export const stepDefinitions: Step[] = [
     // Do not start if other actions in the same plan reported an error or failure (but allow for
     // overriding that if (re-)scheduled by itself without the troublesome actions)
     startOnError: false,
-    requiredSettings: ['environment'],
     actionName: 'SipZipCopyHandler',
-    description: 'SIP kopiëren naar Transfer Agent',
+    description: 'Preservica SIP kopiëren naar Transfer Agent',
+    // When restarting for status = NEW, SIP Creator needs to be run again for a new CollectionRef
     allowRestart: true,
     info:
-      'Deze actie krijgt status "mislukt" als eerdere acties in dezelfde selectie fouten rapporteerden. De kopieeractie kan altijd opnieuw worden uitgevoerd, bijvoorbeeld als er een andere e-Depotomgeving (test of productie) ingesteld wordt.',
+      'Deze actie krijgt status "mislukt" als eerdere acties in dezelfde selectie fouten rapporteerden. De kopieeractie kan altijd opnieuw worden uitgevoerd, maar de gekozen omgeving kan niet worden gewijzigd.',
   },
 ];
 
@@ -349,11 +353,8 @@ export type Settings = {
   securityTag?: SecurityTag;
   // This may be defined implicitly by other parameters, but for UX we need this anyway
   collectionStatus?: CollectionStatus;
-  // A reference to an existing collection, for target type SAME
+  // A reference to an existing collection, only used for collectionStatus SAME
   collectionRef?: string;
-  // Code and title for a new collection, for target type NEW
-  collectionCode?: string;
-  collectionTitle?: string;
 };
 
 export type SettingsKey = keyof Settings;

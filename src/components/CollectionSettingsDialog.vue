@@ -11,10 +11,16 @@
     >
       <div class="p-text-left">
         <div class="p-fluid p-formgrid p-grid">
-          <div class="p-field p-col-12 p-md-3">
+          <div :class="settingClass('environment')" class="p-field p-col-12 p-md-3">
             <label for="environment"
               >Omgeving
-              <Tag v-if="settings.environment === 'prod'" severity="warning">productie</Tag>
+              <!-- <Tag v-if="settings.environment === 'prod'" severity="warning">productie</Tag>-->
+              <i
+                v-if="settings.environment === 'prod'"
+                :style="{ color: 'red' }"
+                class="pi pi-bell"
+                title="Let op: productie"
+              ></i>
             </label>
             <Dropdown
               id="environment"
@@ -22,20 +28,10 @@
               :options="environments"
               optionLabel="name"
               optionValue="code"
-              :class="settingClass('environment')"
               placeholder="maak een keuze"
             />
           </div>
-          <div class="p-field p-col-12 p-md-3">
-            <label for="owner">Eigenaar</label>
-            <InputText
-              id="owner"
-              v-model="settings.owner"
-              :class="settingClass('owner')"
-              placeholder="Afkorting in e-Depot"
-            />
-          </div>
-          <div class="p-field p-col-12 p-md-3">
+          <div :class="settingClass('securityTag')" class="p-field p-col-12 p-md-3">
             <label for="securityTag">Standaardtoegang</label>
             <Dropdown
               id="securityTag"
@@ -43,11 +39,14 @@
               :options="securityTags"
               optionLabel="name"
               optionValue="code"
-              :class="settingClass('securityTag')"
               placeholder="maak een keuze"
             />
           </div>
-          <div class="p-field p-col-12 p-md-3">
+          <div :class="settingClass('owner')" class="p-field p-col-12 p-md-3">
+            <label for="owner">Eigenaar</label>
+            <InputText id="owner" v-model="settings.owner" placeholder="Afkorting in e-Depot" />
+          </div>
+          <div :class="settingClass('prewash')" class="p-field p-col-12 p-md-3">
             <label for="prewash">Voorbewerking</label>
             <Dropdown
               id="prewash"
@@ -55,12 +54,11 @@
               :options="prewashStylesheets"
               :filter="true"
               filterPlaceholder="zoek script"
-              :class="settingClass('prewash')"
-              placeholder="maak een keuze"
+              :placeholder="settingClass('prewash')['p-invalid'] ? 'maak een keuze' : ''"
               :showClear="true"
             />
           </div>
-          <div class="p-field p-col-12 p-md-3">
+          <div :class="settingClass('checksumType')" class="p-field p-col-12 p-md-3">
             <label for="checksumType">Type controlegetal</label>
             <Dropdown
               id="checksumType"
@@ -68,21 +66,19 @@
               :options="checksumTypes"
               optionLabel="name"
               optionValue="code"
-              :class="settingClass('checksumType')"
               placeholder="maak een keuze"
             />
           </div>
-          <div class="p-field p-col-12 p-md-9">
+          <div :class="settingClass('checksumValue')" class="p-field p-col-12 p-md-9">
             <label for="expectedChecksum">Opgegeven controlegetal</label>
             <InputText
               id="expectedChecksum"
               v-model="settings.checksumValue"
-              :class="settingClass('checksumValue')"
               type="text"
               placeholder="De checksum van de zorgdrager"
             />
           </div>
-          <div class="p-field p-col-12 p-md-3">
+          <div :class="settingClass('collectionStatus')" class="p-field p-col-12 p-md-3">
             <label for="collectionStatus">Doelcollectie</label>
             <Dropdown
               id="collectionStatus"
@@ -90,51 +86,27 @@
               :options="collectionStatuses"
               optionLabel="name"
               optionValue="code"
-              :class="settingClass('collectionStatus')"
               placeholder="maak een keuze"
             />
           </div>
-          <div v-if="!settings.collectionStatus" class="p-col-12 p-md-9"></div>
-          <div v-if="settings.collectionStatus === 'NEW'" class="p-field p-col-12 p-md-3">
-            <label for="collectionCode">Collectiecode</label>
-            <InputText
-              id="collectionCode"
-              v-model="settings.collectionCode"
-              :class="settingClass('collectionCode')"
-              type="text"
-              placeholder="Code bronsysteem"
-            />
-          </div>
-          <div v-if="settings.collectionStatus === 'NEW'" class="p-field p-col-12 p-md-6">
-            <label for="collectionTitle">Collectienaam (bronsysteem)</label>
-            <InputText
-              id="collectionTitle"
-              v-model="settings.collectionTitle"
-              :class="settingClass('collectionTitle')"
-              type="text"
-              placeholder="Naam bronsysteem"
-            />
-          </div>
-          <div v-if="settings.collectionStatus === 'SAME'" class="p-field p-col-12 p-md-9">
+          <div v-if="settings.collectionStatus !== 'SAME'" class="p-col-12 p-md-9"></div>
+          <div
+            v-if="settings.collectionStatus === 'SAME'"
+            :class="settingClass('collectionRef')"
+            class="p-field p-col-12 p-md-9"
+          >
             <label for="collectionRef">Referentie bestaande collectie</label>
             <InputText
               id="collectionRef"
               v-model="settings.collectionRef"
-              :class="settingClass('collectionRef')"
               type="text"
               placeholder="GUID van collectie in e-Depot"
             />
           </div>
-          <div class="p-field p-col-12">
+          <div :class="settingClass('description')" class="p-field p-col-12">
             <label for="description">Omschrijving</label>
             <!-- TODO fix padding after upgrading PrimeVUE (or remove `description` altogether) -->
-            <Textarea
-              id="description"
-              v-model="settings.description"
-              :class="settingClass('description')"
-              rows="1"
-              :autoResize="true"
-            />
+            <Textarea id="description" v-model="settings.description" rows="1" :autoResize="true" />
           </div>
         </div>
       </div>
@@ -204,6 +176,10 @@ export default defineComponent({
       type: Function as PropType<(settings: Settings) => SettingsKey[]>,
       required: true,
     },
+    lockedSettings: {
+      type: Function as PropType<(settings: Settings) => SettingsKey[]>,
+      required: true,
+    },
     onSaveAndRun: {
       type: Function,
       required: false,
@@ -241,7 +217,6 @@ export default defineComponent({
   methods: {
     init() {
       this.settings = { ...this.collection.settings };
-      this.settings.environment = this.settings.environment ?? 'test';
       this.settings.checksumType = this.settings.checksumType ?? 'SHA1';
       this.settings.collectionStatus = this.settings.collectionStatus ?? 'NEW';
       this.saving = false;
@@ -283,9 +258,6 @@ export default defineComponent({
       // Though SIP Creator should ignore excessive settings, let's be defensive
       if (this.settings.collectionStatus === 'NEW') {
         delete this.settings.collectionRef;
-      } else if (this.settings.collectionStatus === 'SAME') {
-        delete this.settings.collectionCode;
-        delete this.settings.collectionTitle;
       }
 
       const result = await this.api.saveSettings(this.collection.sessionId, this.settings);
@@ -335,8 +307,10 @@ export default defineComponent({
 
     settingClass(setting: SettingsKey) {
       const required = this.props.requiredSettings(this.settings).find((s) => s === setting);
+      const locked = this.props.lockedSettings(this.settings).find((s) => s === setting);
       return {
         'p-invalid': required && !this.settings[setting],
+        'p-disabled': locked,
       };
     },
   },

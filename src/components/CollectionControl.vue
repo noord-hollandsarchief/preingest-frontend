@@ -34,13 +34,6 @@
           <span v-if="collection.settings.collectionStatus === 'SAME'">
             ({{ collection.settings.collectionRef || 'nog niet ingesteld' }})</span
           >
-          <span v-if="collection.settings.collectionStatus === 'NEW'">
-            ({{
-              [collection.settings.collectionCode, collection.settings.collectionTitle]
-                .filter(Boolean)
-                .join(', ') || 'nog niet ingesteld'
-            }})</span
-          >
         </p>
       </div>
     </div>
@@ -49,6 +42,7 @@
       v-model:visible="showSettings"
       :collection="collection"
       :requiredSettings="requiredSettings"
+      :lockedSettings="lockedSettings"
       :onSaveAndRun="onSaveAndRun"
     />
 
@@ -75,7 +69,6 @@
             />
             <Tag
               v-if="collection.settings.environment === 'prod'"
-              p-ml-2
               style="height: revert"
               severity="warning"
               >productie</Tag
@@ -229,7 +222,7 @@ export default defineComponent({
     steps.value.forEach((step) => (step.selected = step.fixedSelected ?? step.selected));
     selectedSteps.value = steps.value.filter((step) => step.selected);
 
-    const { requiredSettings, missingSettings, runSelectedSteps } = useStepsRunner(
+    const { requiredSettings, missingSettings, lockedSettings, runSelectedSteps } = useStepsRunner(
       collection,
       steps
     );
@@ -262,6 +255,7 @@ export default defineComponent({
       showSettings,
       requiredSettings,
       missingSettings,
+      lockedSettings,
       runSelectedSteps,
       downloadExcel,
     };

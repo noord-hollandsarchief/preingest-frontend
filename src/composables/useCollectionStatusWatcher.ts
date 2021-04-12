@@ -85,7 +85,12 @@ export function useCollectionStatusWatcher(
           ? scheduledAction.status
           : lastAction?.actionStatus;
 
-      step.fixedSelected = !step.allowRestart && step.status === 'Success' ? false : undefined;
+      step.fixedSelected =
+        !step.allowRestart && step.status === 'Success'
+          ? false
+          : steps.value.some((s) => s.status === 'Success' && s.lockSteps?.includes(step.id))
+          ? false
+          : undefined;
       step.selected = step.fixedSelected ?? step.selected;
 
       step.lastStart = lastAction?.summary?.start || lastAction?.creation || step.lastStart;

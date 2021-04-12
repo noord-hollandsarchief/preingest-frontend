@@ -8,25 +8,72 @@ export function useStepsRunner(collection: Ref<Collection | undefined>, steps: R
   const selectedSteps = () => steps.value.filter((step) => step.selected);
 
   /**
+   * Add the required settings (possibly none) for the given `step` to the given accumulator `acc`,
+   * taking dependent settings into account.
+   *
+   * @param acc accumulator to which to add the (possibly zero) required settings
+   * @param step
+   * @param settings optional transient values from a settings dialog; if not set the collection's
+   *        persisted values are used
+   */
+  const addRequiredAndDependentSettings = (
+    acc: Set<SettingsKey>,
+    step: Step,
+    settings?: Settings
+  ) => {
+    for (const setting of step.requiredSettings || []) {
+      acc.add(setting);
+      if (step.dependentSettings) {
+        const value = (settings || collection.value?.settings)?.[setting];
+        const dependent = step.dependentSettings[setting]?.find((s) => s.value === value);
+        if (dependent) {
+          dependent.requiredSettings.forEach((setting) => acc.add(setting));
+        }
+      }
+    }
+    return acc;
+  };
+
+  /**
    * Return a (possibly empty) list of settings that are required for the selected actions, like the
    * checksum type when calculating the checksum. This takes dependent settings into account.
    *
-   * @param settings values from a settings dialog; if not set the collection's settings are used
+   * @param settings optional transient values from a settings dialog; if not set the collection's
+   *        persisted values are used
    */
   const requiredSettings = (settings?: Settings) => {
-    return selectedSteps().reduce((acc, step) => {
-      for (const setting of step.requiredSettings || []) {
-        acc.push(setting);
-        if (step.dependentSettings) {
-          const value = (settings || collection.value?.settings)?.[setting];
-          const dependent = step.dependentSettings[setting]?.find((s) => s.value === value);
-          if (dependent) {
-            acc = acc.concat(...dependent.requiredSettings);
-          }
-        }
-      }
-      return acc;
-    }, [] as SettingsKey[]);
+    return Array.from(
+      selectedSteps().reduce((acc, step) => {
+        return addRequiredAndDependentSettings(acc, step, settings);
+      }, new Set<SettingsKey>())
+    );
+  };
+
+  /**
+   * Return a (possibly empty) list of settings that cannot be changed given completed actions that
+   * are not allowed a restart or which explicitly lock other steps upon success.
+   *
+   * @param settings optional transient values from a settings dialog; if not set the collection's
+   *        persisted values are used
+   */
+  const lockedSettings = (settings?: Settings): SettingsKey[] => {
+    return Array.from(
+      steps.value
+        .filter((step) => step.status === 'Success' && !step.allowRestart)
+        .reduce((acc, step) => {
+          addRequiredAndDependentSettings(acc, step, settings);
+          step.lockSteps?.reduce((acc, stepId: string) => {
+            const lockStep = steps.value.find((s) => s.id === stepId);
+            if (lockStep) {
+              addRequiredAndDependentSettings(acc, lockStep, settings);
+            } else {
+              console.error('Programming error: step not found; id=' + stepId);
+            }
+            return acc;
+          }, acc);
+          return acc;
+        }, new Set<SettingsKey>())
+    );
   };
 
   /**
@@ -68,6 +115,7 @@ export function useStepsRunner(collection: Ref<Collection | undefined>, steps: R
   return {
     requiredSettings,
     missingSettings,
+    lockedSettings,
     runSelectedSteps,
   };
 }
