@@ -3,6 +3,10 @@
 A Vue.js and PrimeVue frontend towards the API that runs the
 [the pre-ingest tooling](https://github.com/noord-hollandsarchief/preingest).
 
+[![Overview page of available tar archives](./docs/overview.gif)](./docs/overview.gif)
+
+[![Processing of single tar archive](./docs/processing.gif)](./docs/processing.gif)
+
 ## Development
 
 ### Init
