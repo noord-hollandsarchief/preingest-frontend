@@ -407,4 +407,8 @@ export default defineComponent({
   padding-left: 1.5rem;
   padding-right: 0.5rem;
 }
+.p-datatable-row-expansion .pre {
+  width: 95vw;
+  max-height: 40vh;
+}
 </style>
