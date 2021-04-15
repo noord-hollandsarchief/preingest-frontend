@@ -3,6 +3,8 @@
 A Vue.js and PrimeVue frontend towards the API that runs the
 [the pre-ingest tooling](https://github.com/noord-hollandsarchief/preingest).
 
+For details or a quick demo, [please contact us](mailto:arjan.van.bentem@noord-hollandsarchief.nl).
+
 [![Overview page of available tar archives](./docs/overview.gif)](./docs/overview.gif)
 
 [![Processing of single tar archive](./docs/processing.gif)](./docs/processing.gif)
@@ -72,6 +74,9 @@ this file](./vue.config.js) in the SCSS of all custom components.
   Unlike the pre-commit hook (see below), this is not limited to staged files.
 
 ### Docker
+
+For a quick demo of both backend and frontend, you may want to use the `docker-compose.yml` file
+included in [the backend project](https://github.com/noord-hollandsarchief/preingest#docker).
 
 The [Dockerfile](./Dockerfile) creates a temporary (partially cached) build image, builds the
 project, and creates a final image that serves the static result using Nginx. To avoid CORS issues,
