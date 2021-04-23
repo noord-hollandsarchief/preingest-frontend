@@ -27,7 +27,9 @@
             &nbsp;<Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
           </span>
         </p>
-        <p v-if="collection.settings.prewash">Voorbewerking: {{ collection.settings.prewash }}</p>
+        <p v-if="collection.settings.prewash">
+          Voorbewerking: {{ collection.settings.prewash?.replace(/_/g, ' ') }}
+        </p>
         <p v-if="collection.settings.securityTag">Standaardtoegang: {{ securityTag }}</p>
         <p v-if="collection.settings.environment || collection.settings.collectionStatus">
           Doel: {{ [collectionStatus, environment].filter(Boolean).join(' op ') }}

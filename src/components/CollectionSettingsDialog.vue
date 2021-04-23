@@ -52,6 +52,7 @@
               id="prewash"
               v-model="settings.prewash"
               :options="prewashStylesheets"
+              :optionLabel="(name) => name.replace(/_/g, ' ')"
               :filter="true"
               filterPlaceholder="zoek script"
               :placeholder="settingClass('prewash')['p-invalid'] ? 'maak een keuze' : ''"

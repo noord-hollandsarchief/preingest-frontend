@@ -9,7 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Support for pre-wash transformations
+- Support for "pre-wash" custom XSLT transformations that run before validations and standard 
+  transformations
 - Lock settings that no longer affect the result once other actions have completed successfully,
   especially to prevent trying to ingest a given Preservica SIP file to multiple environments (which
   fails when environments are different tenants on the same cloud instance)
