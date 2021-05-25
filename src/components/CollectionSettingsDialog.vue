@@ -105,7 +105,7 @@
             />
           </div>
           <div :class="settingClass('description')" class="p-field p-col-12">
-            <label for="description">Omschrijving</label>
+            <label for="description">Notities</label>
             <!-- TODO fix padding after upgrading PrimeVUE (or remove `description` altogether) -->
             <Textarea id="description" v-model="settings.description" rows="1" :autoResize="true" />
           </div>

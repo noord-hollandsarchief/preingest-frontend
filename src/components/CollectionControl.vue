@@ -7,7 +7,7 @@
           {{ formatFileSize(collection.size) }})
         </p>
         <p v-if="collection.settings.description">
-          Omschrijving: {{ collection.settings.description }}
+          Notities: {{ collection.settings.description }}
         </p>
         <p v-if="collection.settings.owner">Eigenaar: {{ collection.settings.owner }}</p>
         <p v-if="collection.settings.checksumValue">
