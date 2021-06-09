@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Lock settings that no longer affect the result once other actions have completed successfully,
   especially to prevent trying to ingest a given Preservica SIP file to multiple environments (which
   fails when environments are different tenants on the same cloud instance)
+- Add option to force the security tag to `public` (next to `open` and `closed`), regardless what is
+  given in ToPX (only `open` and `closed` are defaults for every Preservica installation, but most
+  will also have `public` after reading the manual for Universal Access)
 
 
 ## 1.0.0 - 2021-04-01

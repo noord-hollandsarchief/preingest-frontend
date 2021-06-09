@@ -31,19 +31,20 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
 /**
  * The default security tag the ToPX transformation will apply when not given in the ToPX
  * `<gebruiksrechten><omschrijvingVoorwaarden>...</omschrijvingVoorwaarden></gebruiksrechten>`,
- * or when forcefully setting it to default Preservica tags. The Preservica defaults will be used
- * as is (and will even be used when the ToPX supplies other values). The others will only be used
- * when nothing is specified, and are prefixed with `Tag_<owner>_`.
+ * or when forcefully setting it to Preservica tags `closed`, `open` or `public`. Those specific
+ * tags will be used as is (and will even be used when the ToPX supplies other values). The others
+ * will only be used when nothing is specified, and are prefixed with `Tag_<owner>_`.
  *
  * NOTE: when changing, see also `dependentSettings` in step `transform` of {@link stepDefinitions}.
  */
-export type SecurityTag = 'publiek' | 'publiek_metadata' | 'intern' | 'open' | 'closed';
+export type SecurityTag = 'publiek' | 'publiek_metadata' | 'intern' | 'closed' | 'open' | 'public';
 export const securityTags: { name: string; code: SecurityTag }[] = [
   { name: 'publiek', code: 'publiek' },
   { name: 'alleen metadata', code: 'publiek_metadata' },
   { name: 'intern', code: 'intern' },
-  { name: 'forceer Preservica open', code: 'open' },
   { name: 'forceer Preservica closed', code: 'closed' },
+  { name: 'forceer Preservica open', code: 'open' },
+  { name: 'forceer Preservica public', code: 'public' },
 ];
 
 /**
@@ -289,7 +290,7 @@ export const stepDefinitions: Step[] = [
     dependentSettings: {
       collectionStatus: [{ value: 'SAME', requiredSettings: ['collectionRef'] }],
       securityTag: [
-        // `owner` is not needed when `securityTag` is Preservica's `open` or `closed`
+        // `owner` is not needed when `securityTag` is forced to Preservica's `closed`, `open` or `public`
         { value: 'publiek', requiredSettings: ['owner'] },
         { value: 'publiek_metadata', requiredSettings: ['owner'] },
         { value: 'intern', requiredSettings: ['owner'] },
