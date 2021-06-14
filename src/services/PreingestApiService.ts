@@ -249,14 +249,15 @@ export const stepDefinitions: Step[] = [
     // See comment above
     allowRestart: true,
   },
-  {
-    id: 'reporting/planets',
-    dependsOn: ['profiling'],
-    // actionName: 'ReportingDroidXmlHandler - Droid XML report',
-    // TODO There is also some ReportingDroidXmlHandler :-(
-    actionName: 'ReportingPlanetsXmlHandler',
-    description: 'DROID resultaten exporteren naar XML',
-  },
+  // This has never been used so far, but the API supports it
+  // {
+  //   id: 'reporting/planets',
+  //   dependsOn: ['profiling'],
+  //   // There is also some ReportingDroidXmlHandler; unsure about the difference
+  //   actionName: 'ReportingPlanetsXmlHandler',
+  //   description: 'DROID resultaten exporteren naar XML',
+  //   allowRestart: true,
+  // },
   {
     id: 'reporting/pdf',
     dependsOn: ['profiling'],
