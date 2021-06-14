@@ -234,16 +234,20 @@ export const stepDefinitions: Step[] = [
     id: 'profiling',
     dependsOn: ['unpack'],
     // TODO Do we still need the old name in the action results?
-    // actionName: 'ProfilesHandler - Droid Profiling',
     actionName: 'ProfilesHandler',
     description: 'DROID bestandsclassificatie voorbereiden',
+    // Just in case excessive files, such as .DS_Store or Thumbs.db files, are removed and we want to validate again
+    allowRestart: true,
+    info:
+      'De classificatie kan meerdere keren worden uitgevoerd, bijvoorbeeld wanneer .DS_Store of Thumbs.db bestanden verwijderd zijn',
   },
   {
     id: 'exporting',
     dependsOn: ['profiling'],
-    // actionName: 'ExportingHandler - Droid CSV report',
     actionName: 'ExportingHandler',
     description: 'DROID resultaten exporteren naar CSV',
+    // See comment above
+    allowRestart: true,
   },
   {
     id: 'reporting/planets',
@@ -256,21 +260,26 @@ export const stepDefinitions: Step[] = [
   {
     id: 'reporting/pdf',
     dependsOn: ['profiling'],
-    // actionName: 'ReportingHandler - Droid PDF report',
     actionName: 'ReportingPdfHandler',
     description: 'DROID PDF-rapportage',
+    // See comment above
+    allowRestart: true,
   },
   {
     id: 'greenlist',
     dependsOn: ['exporting'],
     actionName: 'GreenListHandler',
     description: 'Controleren of alle bestandstypen op voorkeurslijst staan',
+    // See comment above
+    allowRestart: true,
   },
   {
     id: 'encoding',
     dependsOn: ['unpack'],
     actionName: 'EncodingHandler',
     description: 'Encoding metadatabestanden controleren',
+    // See comment above
+    allowRestart: true,
   },
   {
     id: 'validate',
