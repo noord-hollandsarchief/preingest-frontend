@@ -17,6 +17,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add option to force the security tag to `public` (next to `open` and `closed`), regardless what is
   given in ToPX (only `open` and `closed` are defaults for every Preservica installation, but most
   will also have `public` after reading the manual for Universal Access)
+- Make log of SIP Creator available (though that may show errors that are actually just notes)
 
 
 ## 1.0.0 - 2021-04-01

@@ -477,13 +477,20 @@ export class PreingestApiService {
     return { ...collection, settings: collection.settings ?? {} };
   };
 
-  // UnpackTarHandler.json and so on.
+  // UnpackTarHandler.json, SipCreatorHandler.log (not JSON), and so on.
   getActionResult = async (sessionId: string, resultFileName: string): Promise<ActionResult> => {
     // TODO this may fail with 500 Internal Server Error if results don't exist
-    return await this.fetchWithDefaults(`output/json/${sessionId}/${resultFileName}`);
+    if (resultFileName.endsWith('.json')) {
+      return await this.fetchWithDefaults(`output/json/${sessionId}/${resultFileName}`);
+    }
+    return await this.fetchWithDefaults(`output/report/${sessionId}/${resultFileName}`, {
+      headers: {
+        Accept: '*',
+      },
+    });
   };
 
-  // DroidValidationHandler.pdf and so on.
+  // DroidValidationHandler.csv, DroidValidationHandler.pdf, and so on.
   getActionReportUrl = (sessionId: string, name: string) => {
     return `${this.baseUrl}output/report/${sessionId}/${name}`;
   };
@@ -499,10 +506,14 @@ export class PreingestApiService {
       step.downloadUrl = undefined;
 
       for (const resultFile of step.lastAction.resultFiles) {
-        // Assume at most one JSON result and one download link
-        if (resultFile.endsWith('.json')) {
+        // Assume at most one JSON or plain text result, and at most one download link.
+        if (/\.(json|log)$/i.test(resultFile)) {
+          // For SipCreatorHandler, the log is not JSON, but `SipCreatorHandler.log`.
           step.result = await this.getActionResult(sessionId, resultFile);
         } else {
+          // For actions that create a downloadable result, such as a DROID report or the Preservica
+          // SIP, the filename is already set when starting the action. So it may not have been
+          // created or be incomplete when running into errors.
           step.downloadUrl = this.getActionReportUrl(sessionId, resultFile);
         }
       }
@@ -623,18 +634,22 @@ export class PreingestApiService {
     }
 
     // The API may return 200 OK along with Content-Length: 0 (rather than 204 No Content)
-    return res.headers.get('Content-Length') === '0'
-      ? undefined
-      : await res.json().catch((reason) => {
-          this.toast.add({
-            severity: 'error',
-            summary: `Failed to parse response for ${path}`,
-            detail: reason,
-            // Set some max lifetime, as very wide error messages may hide the toast's close button
-            life: 10000,
-          });
-          console.error(reason);
-          throw new Error(`Failed to parse response for ${path}`);
-        });
+    if (res.headers.get('Content-Length') === '0') {
+      return (undefined as never) as T;
+    }
+
+    // This may include a charset, like `application/json; charset=utf-8`, so just look for `json`
+    const isJson = /json/i.test(res.headers.get('Content-Type') || '');
+    return await (isJson ? res.json() : res.text()).catch((reason) => {
+      this.toast.add({
+        severity: 'error',
+        summary: `Failed to parse response for ${path}`,
+        detail: reason,
+        // Set some max lifetime, as very wide error messages may hide the toast's close button
+        life: 10000,
+      });
+      console.error(reason);
+      throw new Error(`Failed to parse response for ${path}`);
+    });
   };
 }
