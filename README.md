@@ -3,7 +3,7 @@
 A Vue.js and PrimeVue frontend towards the API that runs the
 [the pre-ingest tooling](https://github.com/noord-hollandsarchief/preingest).
 
-For details or a quick demo, [please contact us](mailto:arjan.van.bentem@noord-hollandsarchief.nl).
+For details or a quick demo, [please contact us](mailto:preservica@noord-hollandsarchief.nl).
 
 [![Overview page of available tar archives](./docs/overview.gif)](./docs/overview.gif)
 
