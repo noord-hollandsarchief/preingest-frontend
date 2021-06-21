@@ -229,6 +229,8 @@ export const stepDefinitions: Step[] = [
     dependsOn: ['unpack'],
     actionName: 'SidecarValidationHandler',
     description: 'Mappen en bestanden controleren op sidecarstructuur',
+    info:
+      'Deze controle verwacht ToPX, dus kan niet meer worden uitgevoerd nadat ToPX is omgezet naar XIP',
   },
   {
     id: 'profiling',
@@ -287,15 +289,16 @@ export const stepDefinitions: Step[] = [
     dependsOn: ['unpack'],
     actionName: 'MetadataValidationHandler',
     description: 'Metadatabestanden valideren met XML-schema (XSD) en Schematron',
+    // This is locked once transformation of ToPX to XIP has succeeded
     allowRestart: true,
     info:
-      'Deze controle kan meerdere keren worden uitgevoerd, bijvoorbeeld na uitvoeren van voorbewerkingen',
+      'Deze controle kan meerdere keren worden uitgevoerd, bijvoorbeeld na uitvoeren van voorbewerkingen, maar niet meer nadat ToPX is omgezet naar XIP',
   },
   {
     id: 'transform',
     dependsOn: ['unpack'],
-    // Prohibit the optional pre-wash once this step succeeds
-    lockSteps: ['prewash'],
+    // As this changes the metadata files, prohibit the optional validations and pre-wash once this step succeeds
+    lockSteps: ['prewash', 'sidecar', 'validate'],
     requiredSettings: ['collectionStatus', 'securityTag'],
     dependentSettings: {
       collectionStatus: [{ value: 'SAME', requiredSettings: ['collectionRef'] }],
