@@ -206,7 +206,8 @@ export const stepDefinitions: Step[] = [
     actionName: 'ScanVirusValidationHandler',
     description: 'Viruscontrole',
     allowRestart: true,
-    info: 'De viruscontrole kan altijd opnieuw worden uitgevoerd',
+    info:
+      'De viruscontrole kan altijd opnieuw worden uitgevoerd, en de Preservica ingest doet ook altijd een eigen controle',
   },
   {
     id: 'prewash',
@@ -351,7 +352,7 @@ export const stepDefinitions: Step[] = [
     // When restarting for status = NEW, SIP Creator needs to be run again for a new CollectionRef
     allowRestart: true,
     info:
-      'Deze actie krijgt status "mislukt" als eerdere acties in dezelfde selectie fouten rapporteerden. De kopieeractie kan altijd opnieuw worden uitgevoerd, maar de gekozen omgeving kan niet worden gewijzigd.',
+      'Deze actie krijgt status "mislukt" als eerdere acties in dezelfde selectie fouten rapporteerden. De kopieeractie kan altijd opnieuw worden uitgevoerd, maar de gekozen omgeving kan niet worden gewijzigd omdat SIP Creator id\'s genereert die uniek moeten zijn.',
   },
 ];
 
