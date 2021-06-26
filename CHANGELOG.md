@@ -19,6 +19,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   will also have `public` after reading the manual for Universal Access)
 - Make log of SIP Creator available (though that may show errors that are actually just notes)
 
+### Fixed
+
+- Trap signals in custom Docker `docker-defaults.sh` entry point for graceful shutdown
 
 ## 1.0.0 - 2021-04-01
 

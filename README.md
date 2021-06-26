@@ -95,13 +95,13 @@ To run on <http://localhost:9000>, proxy requests for `/api/*` to <http://localh
 proxy requests for `/preingestEventHub/*` to <http://localhost:8000/preingestEventHub/>:
 
 ```text
-docker run -it -p 9000:80 --rm noordhollandsarchief/preingest-frontend:development
+docker run -p 9000:80 --rm noordhollandsarchief/preingest-frontend:development
 ```
 
 To proxy to different ports or locations, set `PROXY_API_DEST` and `PROXY_EVENTHUB_DEST`:
 
 ```text
-docker run -it -p 9000:80 --rm \
+docker run -p 9000:80 --rm \
   --env PROXY_API_DEST=http://host.docker.internal:55004/api/ \
   --env PROXY_EVENTHUB_DEST=http://host.docker.internal:55004/preingestEventHub/ \
   noordhollandsarchief/preingest-frontend:development
@@ -111,7 +111,7 @@ docker run -it -p 9000:80 --rm \
 or use `172.17.0.1` instead of `host.docker.internal`:
 
 ```text
-docker run -it -p 9000:80 --rm \
+docker run -p 9000:80 --rm \
   --env PROXY_API_DEST=http://172.17.0.1:8000/api/ \
   --env PROXY_EVENTHUB_DEST=http://172.17.0.1:8000/preingestEventHub/ \
   noordhollandsarchief/preingest-frontend:development

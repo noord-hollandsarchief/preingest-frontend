@@ -13,5 +13,7 @@ export PROXY_EVENTHUB_DEST=${PROXY_EVENTHUB_DEST:-http://host.docker.internal:80
 echo "Will proxy requests for /api/* to ${PROXY_API_DEST}*"
 echo "Will proxy requests for /preingestEventHub/* to ${PROXY_EVENTHUB_DEST}*"
 
-# Next, let the original entry point do its work
-/docker-entrypoint.sh "$@"
+# Next, let the original Nginx entry point do its work, with whatever is set
+# for CMD; use `exec` to ensure this replaces the current process, so traps any
+# signals Docker may send it (like Ctrl+C)
+exec /docker-entrypoint.sh "$@"

@@ -4,11 +4,11 @@
 #
 # Run on port 9000, and proxy /api/* to http://localhost:8000/api/ on your machine:
 #
-#   docker run -it -p 9000:80 --rm noordhollandsarchief/preingest-frontend:development
+#   docker run -p 9000:80 --rm noordhollandsarchief/preingest-frontend:development
 #
 # Run on port 9000, and proxy /api/* to http://localhost:55004/api/ on your machine:
 #
-#   docker run -it -p 9000:80 --rm \
+#   docker run -p 9000:80 --rm \
 #     --env PROXY_API_DEST=http://host.docker.internal:55004/api/ \
 #     noordhollandsarchief/preingest-frontend:development
 
@@ -39,6 +39,7 @@ COPY docker-defaults.sh /
 RUN chmod +x /docker-defaults.sh
 
 EXPOSE 80
-# This will delegate to the original `docker-entrypoint.sh`
+# This will delegate to the original Nginx `docker-entrypoint.sh`
 ENTRYPOINT ["/docker-defaults.sh"]
+# The default parameters to ENTRYPOINT (unless overruled on the command line)
 CMD ["nginx", "-g", "daemon off;"]
