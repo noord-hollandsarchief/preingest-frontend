@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+- Nothing yet
+
+## [1.1.0] - 2021-07-12
+
 ### Added
 
 - Support for "pre-wash" custom XSLT transformations that run before validations and standard 
@@ -27,4 +31,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Initial release, supporting firing validation and transformation from ToPX to Preservica XIPv4.
 
-[Unreleased]: https://github.com/noord-hollandsarchief/preingest-frontend/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/noord-hollandsarchief/preingest-frontend/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/noord-hollandsarchief/preingest-frontend/compare/v1.0.0...v1.1.0
