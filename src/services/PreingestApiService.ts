@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /**
  * Provide helpers for HTTP calls towards the API of the pre-ingest tooling.
  *
@@ -50,10 +51,11 @@ export const securityTags: { name: string; code: SecurityTag }[] = [
 /**
  * The target Preservica environment/instance.
  */
-export type Environment = 'test' | 'prod';
+export type Environment = 'test' | 'prod' | 'nvt';
 export const environments: { name: string; code: Environment }[] = [
   { name: 'testomgeving', code: 'test' },
   { name: 'productieomgeving', code: 'prod' },
+  { name: 'niet van toepassing', code: 'nvt' },
 ];
 
 /**
@@ -217,7 +219,7 @@ export const stepDefinitions: Step[] = [
     description: 'Voorbewerking',
     allowRestart: true,
     info:
-      'Zolang ToPX niet is omgezet naar XIP kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
+      'Optioneel: Zolang ToPX niet is omgezet naar Opex kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
   },
   {
     id: 'naming',
@@ -231,14 +233,14 @@ export const stepDefinitions: Step[] = [
     actionName: 'SidecarValidationHandler',
     description: 'Mappen en bestanden controleren op sidecarstructuur',
     info:
-      'Deze controle verwacht ToPX, dus kan niet meer worden uitgevoerd nadat ToPX is omgezet naar XIP',
+      'Deze controle verwacht ToPX, dus kan niet meer worden uitgevoerd nadat ToPX is omgezet naar Opex',
   },
   {
     id: 'profiling',
     dependsOn: ['unpack'],
     // TODO Do we still need the old name in the action results?
     actionName: 'ProfilesHandler',
-    description: 'DROID bestandsclassificatie voorbereiden',
+    description: 'DROID - bestandsclassificatie voorbereiden',
     // Just in case excessive files, such as .DS_Store or Thumbs.db files, are removed and we want to validate again
     allowRestart: true,
     info:
@@ -248,7 +250,7 @@ export const stepDefinitions: Step[] = [
     id: 'exporting',
     dependsOn: ['profiling'],
     actionName: 'ExportingHandler',
-    description: 'DROID resultaten exporteren naar CSV',
+    description: 'DROID - resultaten exporteren naar CSV',
     // See comment above
     allowRestart: true,
   },
@@ -265,7 +267,7 @@ export const stepDefinitions: Step[] = [
     id: 'reporting/pdf',
     dependsOn: ['profiling'],
     actionName: 'ReportingPdfHandler',
-    description: 'DROID PDF-rapportage',
+    description: 'DROID - PDF-rapportage',
     // See comment above
     allowRestart: true,
   },
@@ -296,80 +298,89 @@ export const stepDefinitions: Step[] = [
       'Deze controle kan meerdere keren worden uitgevoerd, bijvoorbeeld na uitvoeren van voorbewerkingen, maar niet meer nadat ToPX is omgezet naar XIP',
   },
   {
-    id: 'transform',
+    id: 'checksum',
     dependsOn: ['unpack'],
-    // As this changes the metadata files, prohibit the optional validations and pre-wash once this step succeeds
-    lockSteps: ['prewash', 'sidecar', 'validate'],
-    requiredSettings: ['collectionStatus', 'securityTag'],
-    dependentSettings: {
-      collectionStatus: [{ value: 'SAME', requiredSettings: ['collectionRef'] }],
-      securityTag: [
-        // `owner` is not needed when `securityTag` is forced to Preservica's `closed`, `open` or `public`
-        { value: 'publiek', requiredSettings: ['owner'] },
-        { value: 'publiek_metadata', requiredSettings: ['owner'] },
-        { value: 'intern', requiredSettings: ['owner'] },
-      ],
-    },
-    actionName: 'TransformationHandler',
-    description: 'Metadatabestanden omzetten van ToPX naar XIP',
+    actionName: 'ChecksumHandler',
+    description: 'Fixity waarde uit metadatabestanden extraheren, berekenen en vergelijken',
+    // This is locked once transformation of ToPX to XIP has succeeded
+    allowRestart: true,
+  },   
+  {
+    id: 'buildopex',
+    dependsOn: ['unpack'],
+    actionName: 'BuildOpexHandler',
+    description: 'OPEX - ToPX of MDTO omzetten naar OPEX',
     info:
-      'Voor nieuwe collecties worden naam en code uit ToPX gekopieerd en een ref toegevoegd bij omzetten naar Preservica SIP formaat. Voor bestaande collecties is de ref afhankelijk van de environment. En dit verandert de metadata in de sidecarbestanden; ook na fouten heeft opnieuw uitvoeren meestal geen zin.',
+      'Metadatabestanden omzetten naar OPEX, het resultaat wordt hiermee naar de bucket verstuurd voor ingest',
+  }, 
+  {
+    id: 'polish',
+    dependsOn: ['buildopex'],
+    requiredSettings: ['polish'],
+    actionName: 'PolishHandler',
+    description: 'OPEX - OPEX bestanden nabewerken d.m.v. XSL(T) transformatie.',
+    info: 'Optioneel: OPEX bestanden ervoor nabewerken, voor het verzenden naar de bucket',
   },
   {
-    id: 'sipcreator',
-    dependsOn: ['transform'],
-    // We don't really require `environment` at this point, but for status = NEW this will generate
-    // a unique value for CollectionRef which does not support re-ingesting on a tenant/environment
-    // on the same cloud instance. So, setting requiredSettings here allows for setting allowRestart
-    // on SipZipCopyHandler, but only to repeat the copy action to the very same environment in case
-    // transfer somehow failed.
-    requiredSettings: ['environment'],
-    actionName: 'SipCreatorHandler',
-    description: 'Resultaat exporteren in Preservica SIP bestandsformaat',
+    id: 'clearbucket',
+    dependsOn: [],
+    actionName: 'ClearBucketHandler',
+    description: 'BUCKET - legen',
+    allowRestart: true,
+    info:
+    'Inhoud van de bucket legen. Actie kan altijd opnieuw uitgevoerd worden. Let wel op, actie houdt geen rekening mee met bestaande inhoud en/of processen in en naar de bucket',
   },
   {
-    id: 'validatesip',
-    dependsOn: ['sipcreator'],
-    actionName: 'SipZipMetadataValidationHandler',
-    description: 'Preservica SIP metadatabestanden controleren',
+    id: 'showbucket',
+    dependsOn: [],
+    actionName: 'ShowBucketHandler',
+    description: 'BUCKET - raadplegen en weergeven',
+    allowRestart: true,
+    info:
+      'Inhoud van de bucket raadplegen en tonen. Actie kan altijd opnieuw uitgevoerd worden',
+  },
+  {
+    id: 'upload2bucket',
+    dependsOn: ['buildopex'],
+    actionName: 'UploadBucketHandler',
+    description: 'BUCKET - upload',
+    info: 'OPEX output verzenden naar bucket',
   },
   {
     id: 'excelcreator',
     dependsOn: [],
     actionName: 'ExcelCreatorHandler',
-    description: 'Excelrapportage',
+    description: 'MS Excel - Eindrapportage',
     allowRestart: true,
     info: 'De rapportage kan altijd opnieuw gemaakt worden',
   },
   {
-    id: 'transferagent',
-    dependsOn: ['sipcreator'],
-    // Do not start if other actions in the same plan reported an error or failure (but allow for
-    // overriding that if (re-)scheduled by itself without the troublesome actions)
-    startOnError: false,
-    actionName: 'SipZipCopyHandler',
-    description: 'Preservica SIP kopiëren naar Transfer Agent',
-    // When restarting for status = NEW, SIP Creator needs to be run again for a new CollectionRef
+    id: 'indexing',
+    dependsOn: [],
+    actionName: 'IndexMetadataHandler',
+    description: 'MS Excel - Metadatabestanden indexeren en opslaan in Excel',
     allowRestart: true,
-    info:
-      'Deze actie krijgt status "mislukt" als eerdere acties in dezelfde selectie fouten rapporteerden. De kopieeractie kan altijd opnieuw worden uitgevoerd, maar de gekozen omgeving kan niet worden gewijzigd omdat SIP Creator id\'s genereert die uniek moeten zijn.',
+    info: 'Excel overzicht kan altijd opnieuw gemaakt worden',
   },
 ];
 
 export type Settings = {
-  description?: string;
+  //description?: string;  
+  //environment?: Environment;  
   checksumType?: ChecksumType;
   checksumValue?: string;
-  // The name of the optional pre-wash XSLT script, without any extension
-  prewash?: string;
-  environment?: Environment;
   // The owner name, also used as prefix in, e.g., `<SecurityTag>Tag_owner_Publiek</SecurityTag>`
   owner?: string;
   securityTag?: SecurityTag;
   // This may be defined implicitly by other parameters, but for UX we need this anyway
   collectionStatus?: CollectionStatus;
   // A reference to an existing collection, only used for collectionStatus SAME
+  // The name of the optional pre-wash XSLT script, without any extension
+  prewash?: string;
   collectionRef?: string;
+  polish?: string;
+  mergeRecordAndFile?: string;
+  useSaxon?:string;
 };
 
 export type SettingsKey = keyof Settings;
@@ -409,6 +420,7 @@ export type Collection = {
   calculatedChecksumType?: ChecksumType;
   calculatedChecksumValue?: string;
   excelCreatorDownloadUrl?: string;
+  indexMetadataDownloadUrl?: string;
 };
 
 export type TriggerActionResult = {

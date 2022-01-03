@@ -148,7 +148,15 @@ export function useCollectionStatusWatcher(
             await api.refreshLastActionResults(collection.value.sessionId, step);
             collection.value.excelCreatorDownloadUrl = step.downloadUrl;
             break;
-
+          case 'IndexMetadataHandler':
+            // Actually, the name of the download is not likely to change; just be future-proof
+            collection.value.indexMetadataDownloadUrl = undefined;
+            // We could also simply construct the URL without fetching the full action results:
+            //   url = api.getActionReportUrl(collection.value.sessionId, step.name + '.xlsx')
+            // ...but let's be future-proof here too:
+            await api.refreshLastActionResults(collection.value.sessionId, step);
+            collection.value.indexMetadataDownloadUrl = step.downloadUrl;
+            break;
           default:
             // We could also execute this before the switch-case, but as the TypeScript compiler
             // does not expect api.refreshLastActionResults to change its `step` parameter, that
@@ -197,7 +205,7 @@ export function useCollectionStatusWatcher(
       const interval = setInterval(async () => {
         await update();
         if (!running) {
-          resolve();
+          resolve(0);
           clearInterval(interval);
         }
       }, 500);

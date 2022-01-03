@@ -13,7 +13,11 @@
 #     noordhollandsarchief/preingest-frontend:development
 
 # Temporary (partially cached) build image
-FROM node:lts-alpine as build
+FROM node:lts-alpine3.10 as build
+RUN apk update
+RUN apk add git
+RUN apk add dos2unix
+
 WORKDIR /app
 COPY package.json ./
 COPY yarn.lock ./
@@ -22,7 +26,12 @@ RUN yarn install
 # To take advantage of caching until package.json or yarn.lock changes: only now copy
 # all else into the build image, and build.
 # See http://bitjudo.com/blog/2014/03/13/building-efficient-dockerfiles-node-dot-js/
-COPY . .
+#COPY . .
+WORKDIR /frontend
+RUN git clone https://github.com/noord-hollandsarchief/preingest-frontend.git /frontend
+COPY . /app
+
+WORKDIR /app
 RUN yarn build
 
 # Final target image
@@ -35,6 +44,9 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # original `/etc/nginx/conf.d/default.conf`; see https://hub.docker.com/_/nginx
 COPY docker-nginx.conf /etc/nginx/templates/default.conf.template
 COPY docker-defaults.sh /
+RUN dos2unix /docker-defaults.sh
+
+
 # Just in case the file mode was not properly set in Git
 RUN chmod +x /docker-defaults.sh
 

@@ -77,9 +77,17 @@
             >
             <div class="p-ml-auto">
               <Button
+                v-if="collection.indexMetadataDownloadUrl"
+                :disabled="!collection.indexMetadataDownloadUrl"
+                label="Metadata overzicht"
+                icon="pi pi-file-excel"
+                class="p-button-secondary p-as-start p-mr-2"
+                @click="downloadIndexExcel"
+              />
+              <Button
                 v-if="collection.excelCreatorDownloadUrl"
                 :disabled="!collection.excelCreatorDownloadUrl"
-                label="Rapportage"
+                label="Eindrapportage"
                 icon="pi pi-download"
                 class="p-button-secondary p-as-start p-mr-2"
                 @click="downloadExcel"
@@ -173,7 +181,6 @@ import {
   Step,
   checksumTypes,
   collectionStatuses,
-  environments,
   securityTags,
   stepDefinitions,
 } from '@/services/PreingestApiService';
@@ -242,6 +249,10 @@ export default defineComponent({
       location.href = collection.value?.excelCreatorDownloadUrl || '';
     };
 
+    const downloadIndexExcel = () => {
+      location.href = collection.value?.indexMetadataDownloadUrl || '';
+    };
+
     return {
       api,
       formatDateString,
@@ -260,6 +271,7 @@ export default defineComponent({
       lockedSettings,
       runSelectedSteps,
       downloadExcel,
+      downloadIndexExcel,
     };
   },
   computed: {
@@ -287,7 +299,7 @@ export default defineComponent({
     },
 
     environment(): string | undefined {
-      return environments.find((t) => t.code === this.collection?.settings?.environment)?.name;
+      return 'nvt'; //environments.find((t) => t.code === this.collection?.settings?.environment)?.name;
     },
 
     securityTag(): string | undefined {
