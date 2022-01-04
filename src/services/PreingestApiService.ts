@@ -356,7 +356,8 @@ export const stepDefinitions: Step[] = [
   },
   {
     id: 'indexing',
-    dependsOn: [],
+    dependsOn: ['unpack'],
+    requiredSettings: ['schemaToValidate'],
     actionName: 'IndexMetadataHandler',
     description: 'MS Excel - Metadatabestanden indexeren en opslaan in Excel',
     allowRestart: true,
@@ -373,14 +374,16 @@ export type Settings = {
   owner?: string;
   securityTag?: SecurityTag;
   // This may be defined implicitly by other parameters, but for UX we need this anyway
-  collectionStatus?: CollectionStatus;
+  //collectionStatus?: CollectionStatus;
   // A reference to an existing collection, only used for collectionStatus SAME
   // The name of the optional pre-wash XSLT script, without any extension
   prewash?: string;
-  collectionRef?: string;
   polish?: string;
   mergeRecordAndFile?: string;
   useSaxon?:string;
+  schemaToValidate?:string;
+  rootNamesExtraXml?:string;
+  ignoreValidation?:string;
 };
 
 export type SettingsKey = keyof Settings;
@@ -445,7 +448,12 @@ export class PreingestApiService {
   private toast = useToast();
   private baseUrl = process.env.VUE_APP_PREINGEST_API || '/api/';
   private delay = (timeout: number) => new Promise((res) => setTimeout(res, timeout));
-  private prewashStylesheets: string[] = [];
+  private prewashStylesheetList: string[] = [];
+  private polishStylesheetList: string[] = [];
+  private useSaxonOptions: string[] = [];
+  private mergeOpexOptions: string[] = [];
+  private schemaList: string[] = [];
+  private ignoreValidationOptions: string[] = [];
 
   async repeatUntilResult<T>(
     fn: () => Promise<T | undefined>,
@@ -572,17 +580,55 @@ export class PreingestApiService {
    * Get a sorted list of XSLT stylesheets available on the server for use in pre-wash transformations.
    */
   getPrewashStylesheets = async (): Promise<string[]> => {
-    if (!this.prewashStylesheets.length) {
+    if (!this.prewashStylesheetList.length) {
       // This may include non-XSLT files like `Thumbs.db` or `.DS_Store`, and helper transformations
       // starting with an underscore, most typically `_prewash-identity-transform.xslt`.
-      this.prewashStylesheets = (
-        await this.fetchWithDefaults<{ filename: string; name: string }[]>('output/prewashlist')
+      this.prewashStylesheetList = (
+        await this.fetchWithDefaults<{ filename: string; name: string }[]>('output/stylesheets')
       )
         .filter((file) => file.filename.match(/^[^_].+\.xslt$/i))
         .map((file) => file.filename.replace(/\.xslt$/i, ''))
         .sort();
     }
-    return this.prewashStylesheets;
+    return this.prewashStylesheetList;
+  };
+
+  getTransformationOptions = async(): Promise<string[]> =>{
+    this.useSaxonOptions = ['Nee', 'Ja'];
+    return this.useSaxonOptions;  
+  }
+
+  getMergeOpexOptions = async(): Promise<string[]> =>{
+    this.mergeOpexOptions = ['Nee', 'Ja'];
+    return this.mergeOpexOptions;  
+  }
+
+  getIgnoreValidationOptions = async(): Promise<string[]> =>{
+    this.ignoreValidationOptions = ['Nee', 'Ja'];
+    return this.ignoreValidationOptions;  
+  }
+
+  getSchemas = async (): Promise<string[]> => {
+    if (!this.schemaList.length) {
+      this.schemaList = (
+        await this.fetchWithDefaults<{ filename: string; name: string }[]>('output/schemas')
+      ).map((file) => file.filename).sort();
+    }
+    return this.schemaList;
+  };
+
+  getPolishStylesheets = async (): Promise<string[]> => {
+    if (!this.polishStylesheetList.length) {
+      // This may include non-XSLT files like `Thumbs.db` or `.DS_Store`, and helper transformations
+      // starting with an underscore, most typically `_prewash-identity-transform.xslt`.
+      this.polishStylesheetList = (
+        await this.fetchWithDefaults<{ filename: string; name: string }[]>('output/stylesheets')
+      )
+        .filter((file) => file.filename.match(/^[^_].+\.xsl$/i))
+        .map((file) => file.filename.replace(/\.xsl$/i, ''))
+        .sort();
+    }
+    return this.polishStylesheetList;
   };
 
   /**

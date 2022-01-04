@@ -10,28 +10,16 @@
       :dismissableMask="true"
     >
       <div class="p-text-left">
-        <div class="p-fluid p-formgrid p-grid">
-          <div :class="settingClass('environment')" class="p-field p-col-12 p-md-3">
-            <label for="environment"
-              >Omgeving
-              <!-- <Tag v-if="settings.environment === 'prod'" severity="warning">productie</Tag>-->
-              <i
-                v-if="settings.environment === 'prod'"
-                :style="{ color: 'red' }"
-                class="pi pi-bell"
-                title="Let op: productie"
-              ></i>
-            </label>
-            <Dropdown
-              id="environment"
-              v-model="settings.environment"
-              :options="environments"
-              optionLabel="name"
-              optionValue="code"
-              placeholder="maak een keuze"
-            />
+        <Divider align="left">
+          <div class="p-d-inline-flex p-ai-center">
+            <p>
+              <i class="pi pi-users p-mr-2"></i>
+              <b>Beveiliging</b>
+            </p>
           </div>
-          <div :class="settingClass('securityTag')" class="p-field p-col-12 p-md-3">
+        </Divider>
+        <div class="p-fluid p-formgrid p-grid">
+          <div :class="settingClass('securityTag')" class="p-field p-col-2 p-md-6">
             <label for="securityTag">Standaardtoegang</label>
             <Dropdown
               id="securityTag"
@@ -42,12 +30,22 @@
               placeholder="maak een keuze"
             />
           </div>
-          <div :class="settingClass('owner')" class="p-field p-col-12 p-md-3">
+          <div :class="settingClass('owner')" class="p-field p-col-2 p-md-6">
             <label for="owner">Eigenaar</label>
             <InputText id="owner" v-model="settings.owner" placeholder="Afkorting in e-Depot" />
           </div>
-          <div :class="settingClass('prewash')" class="p-field p-col-12 p-md-3">
-            <label for="prewash">Voorbewerking</label>
+        </div>
+        <Divider align="left">
+          <div class="p-d-inline-flex p-ai-center">
+            <p>
+              <i class="pi pi-user-edit p-mr-2"></i>
+              <b>Voorbewerking (ToPX / MDTO)</b>
+            </p>
+          </div>
+        </Divider>
+        <div class="p-fluid p-formgrid p-grid">
+          <div :class="settingClass('prewash')" class="p-field p-col-2 p-md-12">
+            <label for="prewash">Transformatiebestand</label>
             <Dropdown
               id="prewash"
               v-model="settings.prewash"
@@ -55,11 +53,21 @@
               :optionLabel="(name) => name.replace(/_/g, ' ')"
               :filter="true"
               filterPlaceholder="zoek script"
-              :placeholder="settingClass('prewash')['p-invalid'] ? 'maak een keuze' : ''"
+              placeholder="maak een keuze"
               :showClear="true"
             />
           </div>
-          <div :class="settingClass('checksumType')" class="p-field p-col-12 p-md-3">
+        </div>
+        <Divider align="left">
+          <div class="p-d-inline-flex p-ai-center">
+            <p>
+              <i class="pi pi-check-square p-mr-2"></i>
+              <b>Controlegetal</b>
+            </p>
+          </div>
+        </Divider>
+        <div class="p-fluid p-formgrid p-grid">
+          <div :class="settingClass('checksumType')" class="p-field p-col-2 p-md-6">
             <label for="checksumType">Type controlegetal</label>
             <Dropdown
               id="checksumType"
@@ -70,48 +78,134 @@
               placeholder="maak een keuze"
             />
           </div>
-          <div :class="settingClass('checksumValue')" class="p-field p-col-12 p-md-9">
+          <br />
+          <div :class="settingClass('checksumValue')" class="p-field p-col-2 p-md-12">
             <label for="expectedChecksum">Opgegeven controlegetal</label>
-            <InputText
+            <Textarea
               id="expectedChecksum"
               v-model="settings.checksumValue"
-              type="text"
               placeholder="De checksum van de zorgdrager"
+              rows="5"
+              cols="60"
+              :autoResize="false"
             />
           </div>
-          <div :class="settingClass('collectionStatus')" class="p-field p-col-12 p-md-3">
-            <label for="collectionStatus">Doelcollectie</label>
+        </div>
+        <Divider align="left">
+          <div class="p-d-inline-flex p-ai-center">
+            <p>
+              <i class="pi pi-clone p-mr-2"></i>
+              <b>Constructie (OPEX)</b>
+            </p>
+          </div>
+        </Divider>
+        <div class="p-fluid p-formgrid p-grid">
+          <div :class="settingClass('mergeRecordAndFile')" class="p-field p-col-2 p-md-6">
+            <label for="mergeRecordAndFile">Samenvoegen (Record / Archiefstuk in Bestand) </label>
             <Dropdown
-              id="collectionStatus"
-              v-model="settings.collectionStatus"
-              :options="collectionStatuses"
-              optionLabel="name"
-              optionValue="code"
+              id="mergeRecordAndFile"
+              v-model="settings.mergeRecordAndFile"
+              :options="mergeOpexOptions"
+              :optionLabel="(name) => name.replace(/_/g, ' ')"
+              :filter="true"
+              filterPlaceholder="zoek script"
               placeholder="maak een keuze"
+              :showClear="true"
             />
           </div>
-          <div v-if="settings.collectionStatus !== 'SAME'" class="p-col-12 p-md-9"></div>
-          <div
-            v-if="settings.collectionStatus === 'SAME'"
-            :class="settingClass('collectionRef')"
-            class="p-field p-col-12 p-md-9"
-          >
-            <label for="collectionRef">Referentie bestaande collectie</label>
-            <InputText
-              id="collectionRef"
-              v-model="settings.collectionRef"
-              type="text"
-              placeholder="GUID van collectie in e-Depot"
+        </div>
+        <Divider align="left">
+          <div class="p-d-inline-flex p-ai-center">
+            <p>
+              <i class="pi pi-user-edit p-mr-2"></i>
+              <b>Nabewerking (OPEX)</b>
+            </p>
+          </div>
+        </Divider>
+        <div class="p-fluid p-formgrid p-grid">
+          <div :class="settingClass('polish')" class="p-field p-col-2 p-md-6">
+            <label for="polish">Transformatiebestand</label>
+            <Dropdown
+              id="polish"
+              v-model="settings.polish"
+              :options="polishStylesheets"
+              :optionLabel="(name) => name.replace(/_/g, ' ')"
+              :filter="true"
+              filterPlaceholder="zoek script"
+              placeholder="maak een keuze"
+              :showClear="true"
             />
           </div>
-          <div :class="settingClass('description')" class="p-field p-col-12">
-            <label for="description">Notities</label>
-            <!-- TODO fix padding after upgrading PrimeVUE (or remove `description` altogether) -->
-            <Textarea id="description" v-model="settings.description" rows="1" :autoResize="true" />
+          <div :class="settingClass('useSaxon')" class="p-field p-col-2 p-md-6">
+            <label for="useSaxon">door Saxon (langzaam)</label>
+            <Dropdown
+              id="useSaxon"
+              v-model="settings.useSaxon"
+              :options="useSaxonOptions"
+              :optionLabel="(name) => name.replace(/_/g, ' ')"
+              :filter="true"
+              filterPlaceholder="zoek script"
+              placeholder="maak een keuze"
+              :showClear="true"
+            />
+          </div>
+        </div>
+        <Divider align="left">
+          <div class="p-d-inline-flex p-ai-center">
+            <p>
+              <i class="pi pi-book p-mr-2"></i>
+              <b>Metadata indexeren</b>
+            </p>
+          </div>
+        </Divider>
+        <div class="p-fluid p-formgrid p-grid">
+          <div :class="settingClass('schemaToValidate')" class="p-field p-col-3 p-md-6">
+            <label for="schemaToValidate">Validatie schema (verplicht)</label>
+            <Dropdown
+              id="schemaToValidate"
+              v-model="settings.schemaToValidate"
+              :options="schemas"
+              :optionLabel="(name) => name.replace(/_/g, ' ')"
+              :filter="true"
+              filterPlaceholder="zoek schema"
+              placeholder="maak een keuze"
+              :showClear="true"
+              v-tooltip.top="'Kies een XSD schema om te valideren'"
+            />
+          </div>
+          <div :class="settingClass('ignoreValidation')" class="p-field p-col-3 p-md-6">
+            <label for="ignoreValidation">Validatie negeren (optioneel, standaard Ja)</label>
+            <Dropdown
+              id="ignoreValidation"
+              v-model="settings.ignoreValidation"
+              :options="ignoreValidationOptions"
+              :optionLabel="(name) => name.replace(/_/g, ' ')"
+              :filter="true"
+              filterPlaceholder="zoek script"
+              placeholder="maak een keuze"
+              :showClear="true"
+              v-tooltip.top="
+                'Indien een fout wordt geconstateerd tijdens het valideren met een schema, dan faalt de stap. Optie [Ja] worden de validatie foutmeldingen genegeerd'
+              "
+            />
+          </div>
+          <br />
+          <div :class="settingClass('rootNames')" class="p-field p-col-3 p-md-12">
+            <label for="rootNamesExtraXml">Extra XML (optioneel)</label>
+            <Textarea
+              id="rootNamesExtraXml"
+              v-model="settings.rootNamesExtraXml"
+              placeholder="Root namen van de gewenste XML bestanden"
+              rows="5"
+              cols="60"
+              :autoResize="false"
+              v-tooltip.top="
+                'XML bestanden (non-metadata bestanden) meenemen voor indexering, meerdere root namen mogelijk door middel van een scheidingsteken (punt-komma)'
+              "
+            />
           </div>
         </div>
       </div>
-
       <template #footer>
         <Button
           label="Annuleren"
@@ -193,7 +287,11 @@ export default defineComponent({
     const saving = ref(false);
     const savingForRun = ref(false);
     const prewashStylesheets = ref<string[]>([]);
-
+    const polishStylesheets = ref<string[]>([]);
+    const useSaxonOptions = ref<string[]>([]);
+    const mergeOpexOptions = ref<string[]>([]);
+    const schemas = ref<string[]>([]);
+    const ignoreValidationOptions = ref<string[]>([]);
     const settingsDirty = computed<boolean>(() => {
       return !isEqual(settings.value, props.collection.settings);
     });
@@ -208,6 +306,11 @@ export default defineComponent({
       environments,
       securityTags,
       prewashStylesheets,
+      polishStylesheets,
+      useSaxonOptions,
+      mergeOpexOptions,
+      schemas,
+      ignoreValidationOptions,
       settingsDirty,
       settings,
       saving,
@@ -219,11 +322,25 @@ export default defineComponent({
     init() {
       this.settings = { ...this.collection.settings };
       this.settings.checksumType = this.settings.checksumType ?? 'SHA1';
-      this.settings.collectionStatus = this.settings.collectionStatus ?? 'NEW';
       this.saving = false;
       this.savingForRun = false;
       this.api.getPrewashStylesheets().then((stylesheets) => {
         this.prewashStylesheets = stylesheets;
+      });
+      this.api.getTransformationOptions().then((options) => {
+        this.useSaxonOptions = options;
+      });
+      this.api.getMergeOpexOptions().then((options) => {
+        this.mergeOpexOptions = options;
+      });
+      this.api.getSchemas().then((options) => {
+        this.schemas = options;
+      });
+      this.api.getPolishStylesheets().then((stylesheets) => {
+        this.polishStylesheets = stylesheets;
+      });
+      this.api.getIgnoreValidationOptions().then((options) => {
+        this.ignoreValidationOptions = options;
       });
     },
 
@@ -255,12 +372,6 @@ export default defineComponent({
      */
     async save() {
       this.saving = true;
-
-      // Though SIP Creator should ignore excessive settings, let's be defensive
-      if (this.settings.collectionStatus === 'NEW') {
-        delete this.settings.collectionRef;
-      }
-
       const result = await this.api.saveSettings(this.collection.sessionId, this.settings);
 
       // TODO trim values
@@ -319,13 +430,6 @@ export default defineComponent({
 </script>
 
 <style scoped lang="scss">
-// TODO Remove if we keep description
-::v-deep(.p-dialog),
-::v-deep(.p-dialog-content) {
-  // Ensure the dropdowns don't need a scrollbar
-  // min-height: 350px;
-}
-
 .p-dialog-mask.p-component-overlay {
   // The default 0.4 is quite dark for presentations
   background-color: rgba(0, 0, 0, 0.1);

@@ -6,10 +6,11 @@
           Bestand: {{ collection.name }} ({{ formatDateString(collection.creationTime) }},
           {{ formatFileSize(collection.size) }})
         </p>
-        <p v-if="collection.settings.description">
-          Notities: {{ collection.settings.description }}
-        </p>
+        <p v-if="collection.settings.securityTag">Standaardtoegang: {{ securityTag }}</p>
         <p v-if="collection.settings.owner">Eigenaar: {{ collection.settings.owner }}</p>
+        <p v-if="collection.settings.prewash">
+          Voorbewerking (ToPX / MDTO): {{ collection.settings.prewash?.replace(/_/g, ' ') }}
+        </p>
         <p v-if="collection.settings.checksumValue">
           Verwacht controlegetal: {{ checksumType }},
           {{ collection.settings.checksumValue }}
@@ -27,15 +28,27 @@
             &nbsp;<Tag v-if="checksumStatus === false" severity="danger">fout</Tag>
           </span>
         </p>
-        <p v-if="collection.settings.prewash">
-          Voorbewerking: {{ collection.settings.prewash?.replace(/_/g, ' ') }}
+        <p v-if="collection.settings.mergeRecordAndFile">
+          Constructie (OPEX) Record/Archiefstuk samenvoegen:
+          {{ collection.settings.mergeRecordAndFile }}
         </p>
-        <p v-if="collection.settings.securityTag">Standaardtoegang: {{ securityTag }}</p>
-        <p v-if="collection.settings.environment || collection.settings.collectionStatus">
-          Doel: {{ [collectionStatus, environment].filter(Boolean).join(' op ') }}
-          <span v-if="collection.settings.collectionStatus === 'SAME'">
-            ({{ collection.settings.collectionRef || 'nog niet ingesteld' }})</span
-          >
+        <p v-if="collection.settings.polish">
+          Nabewerking (OPEX): {{ collection.settings.polish }}
+        </p>
+        <p v-if="collection.settings.useSaxon">
+          Nabewerken (OPEX) d.m.v. Saxon: {{ collection.settings.useSaxon }}
+        </p>
+        <p v-if="collection.settings.schemaToValidate">
+          Bij indexeren van metadata bestanden valideren met:
+          {{ collection.settings.schemaToValidate }}
+        </p>
+        <p v-if="collection.settings.ignoreValidation">
+          Bij indexeren van metadata bestanden validatie foutmeldingen negeren:
+          {{ collection.settings.ignoreValidation }}
+        </p>
+        <p v-if="collection.settings.rootNamesExtraXml">
+          Bij indexeren extra XML bestanden meenemen met de volgende root element naam/namen:
+          {{ collection.settings.rootNamesExtraXml?.split(';') }}
         </p>
       </div>
     </div>
@@ -180,7 +193,6 @@ import {
   Collection,
   Step,
   checksumTypes,
-  collectionStatuses,
   securityTags,
   stepDefinitions,
 } from '@/services/PreingestApiService';
@@ -304,11 +316,6 @@ export default defineComponent({
 
     securityTag(): string | undefined {
       return securityTags.find((t) => t.code === this.collection?.settings?.securityTag)?.name;
-    },
-
-    collectionStatus(): string | undefined {
-      return collectionStatuses.find((t) => t.code === this.collection?.settings?.collectionStatus)
-        ?.name;
     },
   },
   watch: {
