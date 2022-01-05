@@ -12,7 +12,7 @@
 #     --env PROXY_API_DEST=http://host.docker.internal:55004/api/ \
 #     noordhollandsarchief/preingest-frontend:development
 
-# Temporary (partially cached) build image
+# Temporary (partially cached) build image, specific version 3.10 only. Higher version gives us an error with Python while installing yarn. Need to investigate...
 FROM node:lts-alpine3.10 as build
 RUN apk update
 RUN apk add git

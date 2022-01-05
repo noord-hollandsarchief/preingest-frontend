@@ -13,26 +13,42 @@
         <Divider align="left">
           <div class="p-d-inline-flex p-ai-center">
             <p>
-              <i class="pi pi-users p-mr-2"></i>
-              <b>Beveiliging</b>
+              <i class="pi pi-check-square p-mr-2"></i>
+              <b>Controlegetal</b>
             </p>
           </div>
         </Divider>
         <div class="p-fluid p-formgrid p-grid">
-          <div :class="settingClass('securityTag')" class="p-field p-col-2 p-md-6">
-            <label for="securityTag">Standaardtoegang</label>
+          <div :class="settingClass('checksumType')" class="p-field p-col-2 p-md-6">
+            <label
+              for="checksumType"
+              v-tooltip.right="'Kies een type algoritme om te calculeren en te vergelijken'"
+              >Type controlegetal</label
+            >
             <Dropdown
-              id="securityTag"
-              v-model="settings.securityTag"
-              :options="securityTags"
+              id="checksumType"
+              v-model="settings.checksumType"
+              :options="checksumTypes"
               optionLabel="name"
               optionValue="code"
               placeholder="maak een keuze"
             />
           </div>
-          <div :class="settingClass('owner')" class="p-field p-col-2 p-md-6">
-            <label for="owner">Eigenaar</label>
-            <InputText id="owner" v-model="settings.owner" placeholder="Afkorting in e-Depot" />
+          <br />
+          <div :class="settingClass('checksumValue')" class="p-field p-col-2 p-md-12">
+            <label
+              for="checksumValue"
+              v-tooltip.right="'Voer hierin de (aangeleverde) checksum waarde van het bestand'"
+              >Opgegeven controlegetal</label
+            >
+            <Textarea
+              id="checksumValue"
+              v-model="settings.checksumValue"
+              placeholder="De checksum van de zorgdrager"
+              rows="5"
+              cols="60"
+              :autoResize="false"
+            />
           </div>
         </div>
         <Divider align="left">
@@ -44,8 +60,14 @@
           </div>
         </Divider>
         <div class="p-fluid p-formgrid p-grid">
-          <div :class="settingClass('prewash')" class="p-field p-col-2 p-md-12">
-            <label for="prewash">Transformatiebestand</label>
+          <div :class="settingClass('prewash')" class="p-field p-col-2 p-md-6">
+            <label
+              for="prewash"
+              v-tooltip.right="
+                'Kies een stylesheet om ToPX of MDTO metadata bestanden bij te werken. Bijvoorbeeld de omschrijving of beveiliging'
+              "
+              >Transformatiebestand</label
+            >
             <Dropdown
               id="prewash"
               v-model="settings.prewash"
@@ -61,39 +83,6 @@
         <Divider align="left">
           <div class="p-d-inline-flex p-ai-center">
             <p>
-              <i class="pi pi-check-square p-mr-2"></i>
-              <b>Controlegetal</b>
-            </p>
-          </div>
-        </Divider>
-        <div class="p-fluid p-formgrid p-grid">
-          <div :class="settingClass('checksumType')" class="p-field p-col-2 p-md-6">
-            <label for="checksumType">Type controlegetal</label>
-            <Dropdown
-              id="checksumType"
-              v-model="settings.checksumType"
-              :options="checksumTypes"
-              optionLabel="name"
-              optionValue="code"
-              placeholder="maak een keuze"
-            />
-          </div>
-          <br />
-          <div :class="settingClass('checksumValue')" class="p-field p-col-2 p-md-12">
-            <label for="expectedChecksum">Opgegeven controlegetal</label>
-            <Textarea
-              id="expectedChecksum"
-              v-model="settings.checksumValue"
-              placeholder="De checksum van de zorgdrager"
-              rows="5"
-              cols="60"
-              :autoResize="false"
-            />
-          </div>
-        </div>
-        <Divider align="left">
-          <div class="p-d-inline-flex p-ai-center">
-            <p>
               <i class="pi pi-clone p-mr-2"></i>
               <b>Constructie (OPEX)</b>
             </p>
@@ -101,7 +90,13 @@
         </Divider>
         <div class="p-fluid p-formgrid p-grid">
           <div :class="settingClass('mergeRecordAndFile')" class="p-field p-col-2 p-md-6">
-            <label for="mergeRecordAndFile">Samenvoegen (Record / Archiefstuk in Bestand) </label>
+            <label
+              for="mergeRecordAndFile"
+              v-tooltip.right="
+                'Kies [Ja] om metadata van Record (ToPX) of Archiefstuk (MDTO) samen te voegen onder niveau Bestand. Default is [Nee]'
+              "
+              >Samenvoegen (Record / Archiefstuk in Bestand)
+            </label>
             <Dropdown
               id="mergeRecordAndFile"
               v-model="settings.mergeRecordAndFile"
@@ -124,7 +119,13 @@
         </Divider>
         <div class="p-fluid p-formgrid p-grid">
           <div :class="settingClass('polish')" class="p-field p-col-2 p-md-6">
-            <label for="polish">Transformatiebestand</label>
+            <label
+              for="polish"
+              v-tooltip.right="
+                'Kies een stylesheet om OPEX bestanden bij te werken. Bijvoorbeeld de omschrijving of beveiliging'
+              "
+              >Transformatiebestand</label
+            >
             <Dropdown
               id="polish"
               v-model="settings.polish"
@@ -137,7 +138,13 @@
             />
           </div>
           <div :class="settingClass('useSaxon')" class="p-field p-col-2 p-md-6">
-            <label for="useSaxon">door Saxon (langzaam)</label>
+            <label
+              for="useSaxon"
+              v-tooltip.top="
+                'Kies [Ja] voor transformatie via Saxon. Met Saxon is het mogelijk om XSLT versie 2.0/3.0 te gebruiken. Default is [Nee] (versie 1.0). Let op!!! Momenteel is de verwerkingstijd via Saxon langer/trager'
+              "
+              >d.m.v. Saxon</label
+            >
             <Dropdown
               id="useSaxon"
               v-model="settings.useSaxon"
@@ -160,7 +167,9 @@
         </Divider>
         <div class="p-fluid p-formgrid p-grid">
           <div :class="settingClass('schemaToValidate')" class="p-field p-col-3 p-md-6">
-            <label for="schemaToValidate">Validatie schema (verplicht)</label>
+            <label for="schemaToValidate" v-tooltip.right="'Kies een XSD schema om te valideren'"
+              >Validatie schema (verplicht)</label
+            >
             <Dropdown
               id="schemaToValidate"
               v-model="settings.schemaToValidate"
@@ -170,11 +179,16 @@
               filterPlaceholder="zoek schema"
               placeholder="maak een keuze"
               :showClear="true"
-              v-tooltip.top="'Kies een XSD schema om te valideren'"
             />
           </div>
           <div :class="settingClass('ignoreValidation')" class="p-field p-col-3 p-md-6">
-            <label for="ignoreValidation">Validatie negeren (optioneel, standaard Ja)</label>
+            <label
+              for="ignoreValidation"
+              v-tooltip.top="
+                'Indien een fout wordt geconstateerd tijdens het valideren met een schema, dan faalt de stap. Optie [Ja] worden de validatie foutmeldingen genegeerd'
+              "
+              >Validatie negeren (optioneel, standaard Ja)</label
+            >
             <Dropdown
               id="ignoreValidation"
               v-model="settings.ignoreValidation"
@@ -184,14 +198,17 @@
               filterPlaceholder="zoek script"
               placeholder="maak een keuze"
               :showClear="true"
-              v-tooltip.top="
-                'Indien een fout wordt geconstateerd tijdens het valideren met een schema, dan faalt de stap. Optie [Ja] worden de validatie foutmeldingen genegeerd'
-              "
             />
           </div>
           <br />
           <div :class="settingClass('rootNames')" class="p-field p-col-3 p-md-12">
-            <label for="rootNamesExtraXml">Extra XML (optioneel)</label>
+            <label
+              for="rootNamesExtraXml"
+              v-tooltip.right="
+                'XML bestanden (non-metadata bestanden) meenemen voor indexering, meerdere root namen mogelijk door middel van een scheidingsteken (punt-komma)'
+              "
+              >Extra XML (optioneel)</label
+            >
             <Textarea
               id="rootNamesExtraXml"
               v-model="settings.rootNamesExtraXml"
@@ -199,9 +216,6 @@
               rows="5"
               cols="60"
               :autoResize="false"
-              v-tooltip.top="
-                'XML bestanden (non-metadata bestanden) meenemen voor indexering, meerdere root namen mogelijk door middel van een scheidingsteken (punt-komma)'
-              "
             />
           </div>
         </div>
@@ -229,7 +243,7 @@
           :label="savingForRun ? 'Bezig...' : 'Opslaan en starten'"
           icon="pi pi-play"
           :class="`${
-            settings.environment === 'prod' ? 'p-button-warning' : 'p-button-primary'
+            settings.mergeRecordAndFile === 'Ja' ? 'p-button-warning' : 'p-button-primary'
           } p-mr-2`"
           :disabled="allRequiredSet() && !saving ? null : 'disabled'"
           @click="saveAndRun"
@@ -248,11 +262,8 @@ import {
   Action,
   checksumTypes,
   Collection,
-  securityTags,
   Settings,
   SettingsKey,
-  collectionStatuses,
-  environments,
 } from '@/services/PreingestApiService';
 export default defineComponent({
   props: {
@@ -302,9 +313,6 @@ export default defineComponent({
       api,
       toast,
       checksumTypes,
-      collectionStatuses,
-      environments,
-      securityTags,
       prewashStylesheets,
       polishStylesheets,
       useSaxonOptions,
@@ -321,7 +329,9 @@ export default defineComponent({
   methods: {
     init() {
       this.settings = { ...this.collection.settings };
-      this.settings.checksumType = this.settings.checksumType ?? 'SHA1';
+      this.settings.useSaxon = this.settings.useSaxon ?? 'Nee';
+      this.settings.mergeRecordAndFile = this.settings.mergeRecordAndFile ?? 'Nee';
+      this.settings.ignoreValidation = this.settings.ignoreValidation ?? 'Nee';
       this.saving = false;
       this.savingForRun = false;
       this.api.getPrewashStylesheets().then((stylesheets) => {

@@ -6,8 +6,6 @@
           Bestand: {{ collection.name }} ({{ formatDateString(collection.creationTime) }},
           {{ formatFileSize(collection.size) }})
         </p>
-        <p v-if="collection.settings.securityTag">Standaardtoegang: {{ securityTag }}</p>
-        <p v-if="collection.settings.owner">Eigenaar: {{ collection.settings.owner }}</p>
         <p v-if="collection.settings.prewash">
           Voorbewerking (ToPX / MDTO): {{ collection.settings.prewash?.replace(/_/g, ' ') }}
         </p>
@@ -36,7 +34,7 @@
           Nabewerking (OPEX): {{ collection.settings.polish }}
         </p>
         <p v-if="collection.settings.useSaxon">
-          Nabewerken (OPEX) d.m.v. Saxon: {{ collection.settings.useSaxon }}
+          Nabewerking (OPEX) d.m.v. Saxon: {{ collection.settings.useSaxon }}
         </p>
         <p v-if="collection.settings.schemaToValidate">
           Bij indexeren van metadata bestanden valideren met:
@@ -82,11 +80,6 @@
               class="p-button-primary p-as-start p-mr-2"
               @click="checkSettingsAndRunSelectedSteps"
             />
-            <Tag
-              v-if="collection.settings.environment === 'prod'"
-              style="height: revert"
-              severity="warning"
-              >productie</Tag
             >
             <div class="p-ml-auto">
               <Button
@@ -189,13 +182,7 @@ import { useToast } from 'primevue/components/toast/useToast';
 import { useApi } from '@/plugins/PreingestApi';
 import { useCollectionStatusWatcher } from '@/composables/useCollectionStatusWatcher';
 import { useStepsRunner } from '@/composables/useStepsRunner';
-import {
-  Collection,
-  Step,
-  checksumTypes,
-  securityTags,
-  stepDefinitions,
-} from '@/services/PreingestApiService';
+import { Collection, Step, checksumTypes, stepDefinitions } from '@/services/PreingestApiService';
 import { getDependencies, getDependents } from '@/utils/dependentList';
 import { formatDateString, formatFileSize } from '@/utils/formatters';
 import CollectionSettingsDialog from '@/components/CollectionSettingsDialog.vue';
@@ -308,14 +295,6 @@ export default defineComponent({
 
     checksumType(): string | undefined {
       return checksumTypes.find((t) => t.code === this.collection?.settings?.checksumType)?.name;
-    },
-
-    environment(): string | undefined {
-      return 'nvt'; //environments.find((t) => t.code === this.collection?.settings?.environment)?.name;
-    },
-
-    securityTag(): string | undefined {
-      return securityTags.find((t) => t.code === this.collection?.settings?.securityTag)?.name;
     },
   },
   watch: {

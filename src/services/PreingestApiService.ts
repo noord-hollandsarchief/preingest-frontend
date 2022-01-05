@@ -21,50 +21,14 @@ export type AnyJson = string | number | boolean | null | JsonMap | JsonArray;
 export type JsonMap = { [index: string]: AnyJson };
 export type JsonArray = AnyJson[];
 
-export type ChecksumType = 'MD5' | 'SHA1' | 'SHA256' | 'SHA512';
+export type ChecksumType = 'MD5' | 'SHA1' | 'SHA224' | 'SHA256' | 'SHA384' | 'SHA512';
 export const checksumTypes: { name: string; code: ChecksumType }[] = [
   { name: 'MD-5', code: 'MD5' },
   { name: 'SHA-1', code: 'SHA1' },
+  { name: 'SHA-224', code: 'SHA224' },
   { name: 'SHA-256', code: 'SHA256' },
+  { name: 'SHA-384', code: 'SHA384' },
   { name: 'SHA-512', code: 'SHA512' },
-];
-
-/**
- * The default security tag the ToPX transformation will apply when not given in the ToPX
- * `<gebruiksrechten><omschrijvingVoorwaarden>...</omschrijvingVoorwaarden></gebruiksrechten>`,
- * or when forcefully setting it to Preservica tags `closed`, `open` or `public`. Those specific
- * tags will be used as is (and will even be used when the ToPX supplies other values). The others
- * will only be used when nothing is specified, and are prefixed with `Tag_<owner>_`.
- *
- * NOTE: when changing, see also `dependentSettings` in step `transform` of {@link stepDefinitions}.
- */
-export type SecurityTag = 'publiek' | 'publiek_metadata' | 'intern' | 'closed' | 'open' | 'public';
-export const securityTags: { name: string; code: SecurityTag }[] = [
-  { name: 'publiek', code: 'publiek' },
-  { name: 'alleen metadata', code: 'publiek_metadata' },
-  { name: 'intern', code: 'intern' },
-  { name: 'forceer Preservica closed', code: 'closed' },
-  { name: 'forceer Preservica open', code: 'open' },
-  { name: 'forceer Preservica public', code: 'public' },
-];
-
-/**
- * The target Preservica environment/instance.
- */
-export type Environment = 'test' | 'prod' | 'nvt';
-export const environments: { name: string; code: Environment }[] = [
-  { name: 'testomgeving', code: 'test' },
-  { name: 'productieomgeving', code: 'prod' },
-  { name: 'niet van toepassing', code: 'nvt' },
-];
-
-/**
- * The target Preservica collection type: a new collection, or an existing one.
- */
-export type CollectionStatus = 'NEW' | 'SAME';
-export const collectionStatuses: { name: string; code: CollectionStatus }[] = [
-  { name: 'nieuwe collectie', code: 'NEW' },
-  { name: 'bestaande collectie', code: 'SAME' },
 ];
 
 // In the future this may also need some "Ready for ingest" and "Done" states.
@@ -365,14 +329,9 @@ export const stepDefinitions: Step[] = [
   },
 ];
 
-export type Settings = {
-  //description?: string;  
-  //environment?: Environment;  
+export type Settings = { 
   checksumType?: ChecksumType;
   checksumValue?: string;
-  // The owner name, also used as prefix in, e.g., `<SecurityTag>Tag_owner_Publiek</SecurityTag>`
-  owner?: string;
-  securityTag?: SecurityTag;
   // This may be defined implicitly by other parameters, but for UX we need this anyway
   //collectionStatus?: CollectionStatus;
   // A reference to an existing collection, only used for collectionStatus SAME
