@@ -264,7 +264,7 @@ export const stepDefinitions: Step[] = [
   {
     id: 'checksum',
     dependsOn: ['unpack'],
-    actionName: 'ChecksumHandler',
+    actionName: 'FilesChecksumHandler',
     description: 'Fixity waarde uit metadatabestanden extraheren, berekenen en vergelijken',
     // This is locked once transformation of ToPX to XIP has succeeded
     allowRestart: true,
