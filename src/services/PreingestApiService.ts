@@ -256,7 +256,6 @@ export const stepDefinitions: Step[] = [
     dependsOn: ['unpack'],
     actionName: 'MetadataValidationHandler',
     description: 'Metadatabestanden valideren met XML-schema (XSD) en Schematron',
-    // This is locked once transformation of ToPX to XIP has succeeded
     allowRestart: true,
     info:
       'Deze controle kan meerdere keren worden uitgevoerd, bijvoorbeeld na uitvoeren van voorbewerkingen, maar niet meer nadat ToPX is omgezet naar XIP',
@@ -266,7 +265,6 @@ export const stepDefinitions: Step[] = [
     dependsOn: ['unpack'],
     actionName: 'FilesChecksumHandler',
     description: 'Fixity waarde uit metadatabestanden extraheren, berekenen en vergelijken',
-    // This is locked once transformation of ToPX to XIP has succeeded
     allowRestart: true,
   },   
   {
