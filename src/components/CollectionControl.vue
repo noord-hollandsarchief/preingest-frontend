@@ -80,7 +80,6 @@
               class="p-button-primary p-as-start p-mr-2"
               @click="checkSettingsAndRunSelectedSteps"
             />
-            >
             <div class="p-ml-auto">
               <Button
                 v-if="collection.indexMetadataDownloadUrl"
