@@ -186,6 +186,15 @@ export const stepDefinitions: Step[] = [
       'Optioneel: Zolang ToPX niet is omgezet naar Opex kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
   },
   {
+    id: 'indexing',
+    dependsOn: ['unpack'],
+    requiredSettings: ['schemaToValidate'],
+    actionName: 'IndexMetadataHandler',
+    description: 'MS Excel - Metadatabestanden indexeren en opslaan in Excel',
+    allowRestart: true,
+    info: 'Excel overzicht kan altijd opnieuw gemaakt worden',
+  },
+  {
     id: 'naming',
     dependsOn: ['unpack'],
     actionName: 'NamingValidationHandler',
@@ -315,15 +324,6 @@ export const stepDefinitions: Step[] = [
     description: 'MS Excel - Eindrapportage',
     allowRestart: true,
     info: 'De rapportage kan altijd opnieuw gemaakt worden',
-  },
-  {
-    id: 'indexing',
-    dependsOn: ['unpack'],
-    requiredSettings: ['schemaToValidate'],
-    actionName: 'IndexMetadataHandler',
-    description: 'MS Excel - Metadatabestanden indexeren en opslaan in Excel',
-    allowRestart: true,
-    info: 'Excel overzicht kan altijd opnieuw gemaakt worden',
   },
 ];
 
@@ -544,7 +544,7 @@ export class PreingestApiService {
         await this.fetchWithDefaults<{ filename: string; name: string }[]>('output/stylesheets')
       )
         .filter((file) => file.filename.match(/^[^_].+\.xslt$/i))
-        .map((file) => file.filename.replace(/\.xslt$/i, ''))
+        .map((file) => file.filename)
         .sort();
     }
     return this.prewashStylesheetList;
@@ -582,7 +582,7 @@ export class PreingestApiService {
         await this.fetchWithDefaults<{ filename: string; name: string }[]>('output/stylesheets')
       )
         .filter((file) => file.filename.match(/^[^_].+\.xsl$/i))
-        .map((file) => file.filename.replace(/\.xsl$/i, ''))
+        .map((file) => file.filename)
         .sort();
     }
     return this.polishStylesheetList;

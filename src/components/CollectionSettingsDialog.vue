@@ -64,7 +64,7 @@
             <label
               for="prewash"
               v-tooltip.right="
-                'Kies een stylesheet om ToPX of MDTO metadata bestanden bij te werken. Bijvoorbeeld de omschrijving of beveiliging'
+                'Kies een stylesheet om ToPX of MDTO metadata bestanden bij te werken. Bijvoorbeeld de omschrijving of beveiliging. Styelsheet bestanden zijn te vinden in [prewash] map met .xslt extensie'
               "
               >Transformatiebestand</label
             >
@@ -122,7 +122,7 @@
             <label
               for="polish"
               v-tooltip.right="
-                'Kies een stylesheet om OPEX bestanden bij te werken. Bijvoorbeeld de omschrijving of beveiliging'
+                'Kies een stylesheet om OPEX bestanden bij te werken. Bijvoorbeeld de omschrijving of beveiliging. Styelsheet bestanden zijn te vinden in [prewash] map met .xsl extensie'
               "
               >Transformatiebestand</label
             >
@@ -168,7 +168,7 @@
         <div class="p-fluid p-formgrid p-grid">
           <div :class="settingClass('schemaToValidate')" class="p-field p-col-3 p-md-6">
             <label for="schemaToValidate" v-tooltip.right="'Kies een XSD schema om te valideren'"
-              >Validatie schema (verplicht)</label
+              >Validatie schema</label
             >
             <Dropdown
               id="schemaToValidate"
@@ -185,9 +185,9 @@
             <label
               for="ignoreValidation"
               v-tooltip.top="
-                'Indien een fout wordt geconstateerd tijdens het valideren met een schema, dan faalt de stap. Optie [Ja] worden de validatie foutmeldingen genegeerd'
+                'Indien een fout wordt geconstateerd tijdens het valideren met een schema, dan faalt de stap. Optie [Ja] worden de validatie foutmeldingen genegeerd. Default is [Nee]'
               "
-              >Validatie negeren (optioneel, standaard Ja)</label
+              >Fouten negeren</label
             >
             <Dropdown
               id="ignoreValidation"
