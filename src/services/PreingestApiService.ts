@@ -183,30 +183,16 @@ export const stepDefinitions: Step[] = [
     description: 'Voorbewerking',
     allowRestart: true,
     info:
-      'Optioneel: Zolang ToPX niet is omgezet naar Opex kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
+      'Optioneel: Zolang ToPX of MDTO niet is omgezet naar Opex kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
   },
   {
     id: 'indexing',
     dependsOn: ['unpack'],
     requiredSettings: ['schemaToValidate'],
     actionName: 'IndexMetadataHandler',
-    description: 'MS Excel - Metadatabestanden indexeren en opslaan in Excel',
+    description: 'MS Excel - Metadatabestanden indexeren',
     allowRestart: true,
-    info: 'Excel overzicht kan altijd opnieuw gemaakt worden',
-  },
-  {
-    id: 'naming',
-    dependsOn: ['unpack'],
-    actionName: 'NamingValidationHandler',
-    description: 'Bestandsnamen controleren',
-  },
-  {
-    id: 'sidecar',
-    dependsOn: ['unpack'],
-    actionName: 'SidecarValidationHandler',
-    description: 'Mappen en bestanden controleren op sidecarstructuur',
-    info:
-      'Deze controle verwacht ToPX, dus kan niet meer worden uitgevoerd nadat ToPX is omgezet naar Opex',
+    info: 'MS Excel overzicht kan altijd opnieuw gemaakt worden',
   },
   {
     id: 'profiling',
@@ -227,15 +213,6 @@ export const stepDefinitions: Step[] = [
     // See comment above
     allowRestart: true,
   },
-  // This has never been used so far, but the API supports it
-  // {
-  //   id: 'reporting/planets',
-  //   dependsOn: ['profiling'],
-  //   // There is also some ReportingDroidXmlHandler; unsure about the difference
-  //   actionName: 'ReportingPlanetsXmlHandler',
-  //   description: 'DROID resultaten exporteren naar XML',
-  //   allowRestart: true,
-  // },
   {
     id: 'reporting/pdf',
     dependsOn: ['profiling'],
@@ -243,6 +220,13 @@ export const stepDefinitions: Step[] = [
     description: 'DROID - PDF-rapportage',
     // See comment above
     allowRestart: true,
+  },
+  {
+    id: 'naming',
+    dependsOn: ['unpack'],
+    actionName: 'NamingValidationHandler',
+    allowRestart: true,
+    description: 'Bestandsnamen controleren',
   },
   {
     id: 'greenlist',
@@ -261,6 +245,15 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
   },
   {
+    id: 'sidecar',
+    dependsOn: ['unpack'],
+    actionName: 'SidecarValidationHandler',
+    description: 'Mappen en bestanden controleren op sidecarstructuur',
+    allowRestart: true,
+    info:
+      'Deze controle verwacht ToPX of MDTO, dus kan niet meer worden uitgevoerd nadat ToPX of MDTO is omgezet naar Opex',
+  },
+  {
     id: 'validate',
     dependsOn: ['unpack'],
     actionName: 'MetadataValidationHandler',
@@ -275,7 +268,15 @@ export const stepDefinitions: Step[] = [
     actionName: 'FilesChecksumHandler',
     description: 'Fixity waarde uit metadatabestanden extraheren, berekenen en vergelijken',
     allowRestart: true,
-  },   
+  }, 
+  {
+    id: 'detection',
+    dependsOn: ['exporting'],
+    actionName: 'PasswordDetectionHandler',
+    description: 'Detecteren van bestanden met wachtwoord beveiliging',
+    info: 'Let op! Alleen bij Adobe PDF en MS Office documenten',
+    allowRestart: true,
+  },  
   {
     id: 'buildopex',
     dependsOn: ['unpack'],
@@ -290,6 +291,7 @@ export const stepDefinitions: Step[] = [
     requiredSettings: ['polish'],
     actionName: 'PolishHandler',
     description: 'OPEX - OPEX bestanden nabewerken d.m.v. XSL(T) transformatie.',
+    allowRestart: true,
     info: 'Optioneel: OPEX bestanden ervoor nabewerken, voor het verzenden naar de bucket',
   },
   {
