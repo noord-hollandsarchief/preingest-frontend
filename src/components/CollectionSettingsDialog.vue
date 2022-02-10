@@ -137,25 +137,6 @@
               :showClear="true"
             />
           </div>
-          <div :class="settingClass('useSaxon')" class="p-field p-col-2 p-md-6">
-            <label
-              for="useSaxon"
-              v-tooltip.top="
-                'Kies [Ja] voor transformatie via Saxon. Met Saxon is het mogelijk om XSLT versie 2.0/3.0 te gebruiken. Default is [Nee] (versie 1.0). Let op!!! Momenteel is de verwerkingstijd via Saxon langer/trager'
-              "
-              >d.m.v. Saxon</label
-            >
-            <Dropdown
-              id="useSaxon"
-              v-model="settings.useSaxon"
-              :options="useSaxonOptions"
-              :optionLabel="(name) => name.replace(/_/g, ' ')"
-              :filter="true"
-              filterPlaceholder="zoek script"
-              placeholder="maak een keuze"
-              :showClear="true"
-            />
-          </div>
         </div>
         <Divider align="left">
           <div class="p-d-inline-flex p-ai-center">

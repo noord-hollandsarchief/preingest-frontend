@@ -243,6 +243,15 @@ export const stepDefinitions: Step[] = [
     description: 'Encoding metadatabestanden controleren',
     // See comment above
     allowRestart: true,
+  }, 
+  {
+    id: 'validate',
+    dependsOn: ['unpack'],
+    actionName: 'MetadataValidationHandler',
+    description: 'Metadatabestanden valideren met XML-schema (XSD) en Schematron',
+    allowRestart: true,
+    info:
+      'Deze controle kan meerdere keren worden uitgevoerd, bijvoorbeeld na uitvoeren van voorbewerkingen, maar niet meer nadat ToPX is omgezet naar XIP',
   },
   {
     id: 'sidecar',
@@ -252,15 +261,6 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info:
       'Deze controle verwacht ToPX of MDTO, dus kan niet meer worden uitgevoerd nadat ToPX of MDTO is omgezet naar Opex',
-  },
-  {
-    id: 'validate',
-    dependsOn: ['unpack'],
-    actionName: 'MetadataValidationHandler',
-    description: 'Metadatabestanden valideren met XML-schema (XSD) en Schematron',
-    allowRestart: true,
-    info:
-      'Deze controle kan meerdere keren worden uitgevoerd, bijvoorbeeld na uitvoeren van voorbewerkingen, maar niet meer nadat ToPX is omgezet naar XIP',
   },
   {
     id: 'checksum',
