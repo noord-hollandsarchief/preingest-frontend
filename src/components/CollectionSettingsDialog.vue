@@ -280,7 +280,6 @@ export default defineComponent({
     const savingForRun = ref(false);
     const prewashStylesheets = ref<string[]>([]);
     const polishStylesheets = ref<string[]>([]);
-    const useSaxonOptions = ref<string[]>([]);
     const mergeOpexOptions = ref<string[]>([]);
     const schemas = ref<string[]>([]);
     const ignoreValidationOptions = ref<string[]>([]);
@@ -296,7 +295,6 @@ export default defineComponent({
       checksumTypes,
       prewashStylesheets,
       polishStylesheets,
-      useSaxonOptions,
       mergeOpexOptions,
       schemas,
       ignoreValidationOptions,
@@ -310,16 +308,12 @@ export default defineComponent({
   methods: {
     init() {
       this.settings = { ...this.collection.settings };
-      this.settings.useSaxon = this.settings.useSaxon ?? 'Nee';
       this.settings.mergeRecordAndFile = this.settings.mergeRecordAndFile ?? 'Nee';
       this.settings.ignoreValidation = this.settings.ignoreValidation ?? 'Nee';
       this.saving = false;
       this.savingForRun = false;
       this.api.getPrewashStylesheets().then((stylesheets) => {
         this.prewashStylesheets = stylesheets;
-      });
-      this.api.getTransformationOptions().then((options) => {
-        this.useSaxonOptions = options;
       });
       this.api.getMergeOpexOptions().then((options) => {
         this.mergeOpexOptions = options;

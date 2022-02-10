@@ -339,7 +339,6 @@ export type Settings = {
   prewash?: string;
   polish?: string;
   mergeRecordAndFile?: string;
-  useSaxon?:string;
   schemaToValidate?:string;
   rootNamesExtraXml?:string;
   ignoreValidation?:string;
@@ -409,7 +408,6 @@ export class PreingestApiService {
   private delay = (timeout: number) => new Promise((res) => setTimeout(res, timeout));
   private prewashStylesheetList: string[] = [];
   private polishStylesheetList: string[] = [];
-  private useSaxonOptions: string[] = [];
   private mergeOpexOptions: string[] = [];
   private schemaList: string[] = [];
   private ignoreValidationOptions: string[] = [];
@@ -551,11 +549,6 @@ export class PreingestApiService {
     }
     return this.prewashStylesheetList;
   };
-
-  getTransformationOptions = async(): Promise<string[]> =>{
-    this.useSaxonOptions = ['Nee', 'Ja'];
-    return this.useSaxonOptions;  
-  }
 
   getMergeOpexOptions = async(): Promise<string[]> =>{
     this.mergeOpexOptions = ['Nee', 'Ja'];

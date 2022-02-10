@@ -33,9 +33,6 @@
         <p v-if="collection.settings.polish">
           Nabewerking (OPEX): {{ collection.settings.polish }}
         </p>
-        <p v-if="collection.settings.useSaxon">
-          Nabewerking (OPEX) d.m.v. Saxon: {{ collection.settings.useSaxon }}
-        </p>
         <p v-if="collection.settings.schemaToValidate">
           Bij indexeren van metadata bestanden valideren met:
           {{ collection.settings.schemaToValidate }}
