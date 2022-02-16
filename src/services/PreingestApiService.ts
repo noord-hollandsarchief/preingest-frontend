@@ -318,6 +318,7 @@ export const stepDefinitions: Step[] = [
     actionName: 'UploadBucketHandler',
     description: 'BUCKET - upload',
     info: 'OPEX output verzenden naar bucket',
+    allowRestart: true,
   },
   {
     id: 'excelcreator',
