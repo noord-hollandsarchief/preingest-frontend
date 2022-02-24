@@ -327,6 +327,14 @@ export const stepDefinitions: Step[] = [
     description: 'MS Excel - Eindrapportage',
     allowRestart: true,
     info: 'De rapportage kan altijd opnieuw gemaakt worden',
+  },  
+  {
+    id: 'topx2mdto',
+    dependsOn: ['unpack', 'exporting'],
+    actionName: 'ToPX2MDTOHandler',
+    description: 'ToPX metadata omzetten naar MDTO metadata',
+    allowRestart: true,
+    info: 'Omzetten gaat uit van ToPX versie 2.3.2 naar MDTO versie 1.0',
   },
 ];
 
@@ -644,7 +652,7 @@ export class PreingestApiService {
         // Set some max lifetime, as very wide error messages may hide the toast's close button
         life: 10000,
       });
-      console.error(res);
+      //console.error(res);
       throw new Error(res.statusText);
     }
 
@@ -663,7 +671,7 @@ export class PreingestApiService {
         // Set some max lifetime, as very wide error messages may hide the toast's close button
         life: 10000,
       });
-      console.error(reason);
+      //console.error(reason);
       throw new Error(`Failed to parse response for ${path}`);
     });
   };
