@@ -329,13 +329,37 @@ export const stepDefinitions: Step[] = [
     info: 'De rapportage kan altijd opnieuw gemaakt worden',
   },  
   {
-    id: 'topx2mdto',
-    dependsOn: ['unpack', 'exporting'],
+    id: 'start_conversion',
+    dependsOn: ['unpack'],
     actionName: 'ToPX2MDTOHandler',
     description: 'ToPX metadata omzetten naar MDTO metadata',
     allowRestart: true,
     info: 'Omzetten gaat uit van ToPX versie 2.3.2 naar MDTO versie 1.0',
   },
+  {
+    id: 'update_fileformat',
+    dependsOn: ['start_conversion', 'exporting'],
+    actionName: 'PronomPropsHandler',
+    description: 'MDTO bestandType bijwerken met PRONOM informatie',
+    allowRestart: true,
+    info: 'Alle metadatabestanden met bestandType bijwerken met PRONOM informatie',
+  },
+  {
+    id: 'update_fixity',
+    dependsOn: ['start_conversion'],
+    actionName: 'FixityPropsHandler',
+    description: 'MDTO bestandType fixity bijwerken (met SHA-256)',
+    allowRestart: true,
+    info: 'Alle metadatabestanden met bestandType bijwerken met checksum algoritme (SHA-256) en waarde',
+  },
+  {
+    id: 'update_relationship',
+    dependsOn: ['start_conversion'],
+    actionName: 'RelationshipHandler',
+    description: 'MDTO relatie referenties bijwerken',
+    allowRestart: true,
+    info: 'Alle referenties (heeftRepresentatie, isOnderdeelVan, bevatOnderdeel, isRepresentatieVan) bijwerken in de huidige collectie',
+  }
 ];
 
 export type Settings = { 
