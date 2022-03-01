@@ -309,7 +309,7 @@ export default defineComponent({
     init() {
       this.settings = { ...this.collection.settings };
       this.settings.mergeRecordAndFile = this.settings.mergeRecordAndFile ?? 'Nee';
-      this.settings.ignoreValidation = this.settings.ignoreValidation ?? 'Nee';
+      this.settings.ignoreValidation = this.settings.ignoreValidation ?? 'Ja';
       this.saving = false;
       this.savingForRun = false;
       this.api.getPrewashStylesheets().then((stylesheets) => {
