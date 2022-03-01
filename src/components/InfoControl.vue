@@ -1,5 +1,13 @@
 <template>
   <div v-if="collection">
+    <CollectionSettingsDialog
+      v-model:visible="showSettings"
+      :collection="collection"
+      :requiredSettings="requiredSettings"
+      :lockedSettings="lockedSettings"
+      :onSaveAndRun="onSaveAndRun"
+    />
+
     <div class="collection card">
       <div>
         <p>
@@ -46,127 +54,6 @@
           {{ collection.settings.rootNamesExtraXml?.split(';') }}
         </p>
       </div>
-    </div>
-
-    <CollectionSettingsDialog
-      v-model:visible="showSettings"
-      :collection="collection"
-      :requiredSettings="requiredSettings"
-      :lockedSettings="lockedSettings"
-      :onSaveAndRun="onSaveAndRun"
-    />
-
-    <div class="card">
-      <DataTable
-        :value="steps"
-        :autoLayout="true"
-        v-model:selection="selectedSteps"
-        v-model:expandedRows="expandedRows"
-        @row-select="onStepSelect"
-        @row-unselect="onStepUnselect"
-        @row-expand="onStepExpand"
-        :class="`p-datatable-sm ${collection.overallStatus}`"
-        :rowClass="rowClass"
-      >
-        <template #header>
-          <div class="p-d-flex p-ai-center datatable-header">
-            <Button
-              :disabled="!hasSelection || collection.overallStatus === 'Running'"
-              :label="collection.overallStatus === 'Running' ? 'Bezig...' : 'Start'"
-              icon="pi pi-play"
-              class="p-button-primary p-as-start p-mr-2"
-              @click="checkSettingsAndRunSelectedSteps"
-            />
-            <div class="p-ml-auto">
-              <Button
-                v-if="collection.indexMetadataDownloadUrl"
-                :disabled="!collection.indexMetadataDownloadUrl"
-                label="Metadata overzicht"
-                icon="pi pi-file-excel"
-                class="p-button-secondary p-as-start p-mr-2"
-                @click="downloadIndexExcel"
-              />
-              <Button
-                v-if="collection.excelCreatorDownloadUrl"
-                :disabled="!collection.excelCreatorDownloadUrl"
-                label="Eindrapportage"
-                icon="pi pi-download"
-                class="p-button-secondary p-as-start p-mr-2"
-                @click="downloadExcel"
-              />
-              <Button
-                :disabled="collection.overallStatus === 'Running'"
-                label="Instellingen"
-                icon="pi pi-cog"
-                class="p-button-secondary p-as-start"
-                @click="editSettings"
-              />
-            </div>
-          </div>
-        </template>
-
-        <Column :expander="true" headerStyle="width: 1rem" bodyStyle="padding: 0" />
-
-        <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-
-        <Column field="description" header="Actie">
-          <template #body="slotProps">
-            <span v-tooltip="slotProps.data.info">
-              {{ slotProps.data.description }}
-              <i v-if="slotProps.data.info" class="pi pi-info-circle"></i>
-            </span>
-          </template>
-        </Column>
-
-        <Column
-          field="lastStart"
-          header="Start"
-          headerClass="p-text-center"
-          bodyClass="p-text-center"
-        >
-          <template #body="slotProps">
-            {{ formatDateString(slotProps.data.lastStart) }}
-          </template>
-        </Column>
-
-        <Column
-          field="lastDuration"
-          header="Duur"
-          headerClass="p-text-center"
-          bodyClass="p-text-center"
-        ></Column>
-
-        <Column
-          field="actionStatus"
-          header="Status"
-          headerClass="p-text-center"
-          bodyClass="p-text-center"
-        >
-          <template #body="slotProps">
-            <Tag v-if="slotProps.data.status === 'Pending'" severity="info">wachtrij</Tag>
-            <Tag v-else-if="slotProps.data.status === 'Executing'" severity="warning">bezig</Tag>
-            <Tag v-else-if="slotProps.data.status === 'Success'" severity="success">gereed</Tag>
-            <Tag
-              v-else-if="slotProps.data.status === 'Error'"
-              severity="danger"
-              v-tooltip="'De actie is uitgevoerd, maar er zijn fouten gevonden'"
-              >fout</Tag
-            >
-            <Tag
-              v-else-if="slotProps.data.status === 'Failed'"
-              severity="danger"
-              v-tooltip="'De actie kon niet worden uitgevoerd'"
-              >mislukt</Tag
-            >
-          </template>
-        </Column>
-
-        <template #expansion="slotProps">
-          <a v-if="slotProps.data.downloadUrl" :href="slotProps.data.downloadUrl">Download</a>
-          <!-- TODO styling, especially scrollbars -->
-          <div class="pre">{{ slotProps.data.result }}</div>
-        </template>
-      </DataTable>
     </div>
   </div>
 </template>

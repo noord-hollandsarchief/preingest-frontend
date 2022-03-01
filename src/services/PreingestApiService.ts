@@ -35,7 +35,7 @@ export const checksumTypes: { name: string; code: ChecksumType }[] = [
 export type OverallStatus = 'New' | 'Running' | 'Success' | 'Error' | 'Failed';
 export type ActionStatus = 'Executing' | 'Success' | 'Error' | 'Failed';
 export type WorkflowItemStatus = 'Pending' | 'Executing' | 'Done';
-
+export type ToolingType = 'Preingest' | 'OPEX' |'ToPX2MDTO' | 'Rapportages'
 export type ActionSummary = {
   processed: number;
   accepted: number;
@@ -143,6 +143,7 @@ export type Step = DependentItem & {
   fixedSelected?: boolean;
   result?: ActionResult;
   downloadUrl?: string;
+  toolingType?:ToolingType;
 };
 
 /**
@@ -159,12 +160,14 @@ export const stepDefinitions: Step[] = [
     description: 'Controlegetal berekenen',
     allowRestart: true,
     info: 'Het controlegetal kan altijd opnieuw worden berekend',
+    toolingType: 'Preingest'
   },
   {
     id: 'unpack',
     dependsOn: [],
     actionName: 'UnpackTarHandler',
     description: 'Archief uitpakken',
+    toolingType: 'Preingest'
   },
   {
     id: 'virusscan',
@@ -174,6 +177,7 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info:
       'De viruscontrole kan altijd opnieuw worden uitgevoerd, en de Preservica ingest doet ook altijd een eigen controle',
+      toolingType: 'Preingest'
   },
   {
     id: 'prewash',
@@ -184,6 +188,7 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info:
       'Optioneel: Zolang ToPX of MDTO niet is omgezet naar Opex kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
+      toolingType: 'Preingest'
   },
   {
     id: 'indexing',
@@ -193,6 +198,7 @@ export const stepDefinitions: Step[] = [
     description: 'MS Excel - Metadatabestanden indexeren',
     allowRestart: true,
     info: 'MS Excel overzicht kan altijd opnieuw gemaakt worden',
+    toolingType: 'Preingest'
   },
   {
     id: 'profiling',
@@ -204,6 +210,7 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info:
       'De classificatie kan meerdere keren worden uitgevoerd, bijvoorbeeld wanneer .DS_Store of Thumbs.db bestanden verwijderd zijn',
+      toolingType: 'Preingest'
   },
   {
     id: 'exporting',
@@ -212,6 +219,7 @@ export const stepDefinitions: Step[] = [
     description: 'DROID - resultaten exporteren naar CSV',
     // See comment above
     allowRestart: true,
+    toolingType: 'Preingest'
   },
   {
     id: 'reporting/pdf',
@@ -220,6 +228,7 @@ export const stepDefinitions: Step[] = [
     description: 'DROID - PDF-rapportage',
     // See comment above
     allowRestart: true,
+    toolingType: 'Preingest'
   },
   {
     id: 'naming',
@@ -227,6 +236,7 @@ export const stepDefinitions: Step[] = [
     actionName: 'NamingValidationHandler',
     allowRestart: true,
     description: 'Bestandsnamen controleren',
+    toolingType: 'Preingest'
   },
   {
     id: 'greenlist',
@@ -235,6 +245,7 @@ export const stepDefinitions: Step[] = [
     description: 'Controleren of alle bestandstypen op voorkeurslijst staan',
     // See comment above
     allowRestart: true,
+    toolingType: 'Preingest'
   },
   {
     id: 'encoding',
@@ -252,6 +263,7 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info:
       'Deze controle kan meerdere keren worden uitgevoerd, bijvoorbeeld na uitvoeren van voorbewerkingen, maar niet meer nadat ToPX is omgezet naar XIP',
+      toolingType: 'Preingest'
   },
   {
     id: 'sidecar',
@@ -261,6 +273,7 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info:
       'Deze controle verwacht ToPX of MDTO, dus kan niet meer worden uitgevoerd nadat ToPX of MDTO is omgezet naar Opex',
+      toolingType: 'Preingest'
   },
   {
     id: 'checksum',
@@ -268,6 +281,7 @@ export const stepDefinitions: Step[] = [
     actionName: 'FilesChecksumHandler',
     description: 'Fixity waarde uit metadatabestanden extraheren, berekenen en vergelijken',
     allowRestart: true,
+    toolingType: 'Preingest'
   }, 
   {
     id: 'detection',
@@ -276,7 +290,36 @@ export const stepDefinitions: Step[] = [
     description: 'Detecteren van bestanden met wachtwoord beveiliging',
     info: 'Let op! Alleen bij Adobe PDF en MS Office documenten',
     allowRestart: true,
-  },  
+    toolingType: 'Preingest'
+  }, 
+  {
+    id: 'unpack',
+    dependsOn: [],
+    actionName: 'UnpackTarHandler',
+    description: 'Archief uitpakken',
+    toolingType: 'OPEX'
+  }, 
+  {
+    id: 'virusscan',
+    dependsOn: ['unpack'],
+    actionName: 'ScanVirusValidationHandler',
+    description: 'Viruscontrole',
+    allowRestart: true,
+    info:
+      'De viruscontrole kan altijd opnieuw worden uitgevoerd, en de Preservica ingest doet ook altijd een eigen controle',
+      toolingType: 'OPEX'
+  },
+  {
+    id: 'prewash',
+    dependsOn: ['unpack'],
+    requiredSettings: ['prewash'],
+    actionName: 'PrewashHandler',
+    description: 'Voorbewerking',
+    allowRestart: true,
+    info:
+      'Optioneel: Zolang ToPX of MDTO niet is omgezet naar Opex kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
+      toolingType: 'OPEX'
+  },
   {
     id: 'buildopex',
     dependsOn: ['unpack'],
@@ -284,6 +327,7 @@ export const stepDefinitions: Step[] = [
     description: 'OPEX - ToPX of MDTO omzetten naar OPEX',
     info:
       'Metadatabestanden omzetten naar OPEX, het resultaat wordt hiermee naar de bucket verstuurd voor ingest',
+      toolingType: 'OPEX'
   }, 
   {
     id: 'polish',
@@ -293,6 +337,7 @@ export const stepDefinitions: Step[] = [
     description: 'OPEX - OPEX bestanden nabewerken d.m.v. XSL(T) transformatie.',
     allowRestart: true,
     info: 'Optioneel: OPEX bestanden ervoor nabewerken, voor het verzenden naar de bucket',
+    toolingType: 'OPEX'
   },
   {
     id: 'clearbucket',
@@ -302,6 +347,7 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info:
     'Inhoud van de bucket legen. Actie kan altijd opnieuw uitgevoerd worden. Let wel op, actie houdt geen rekening mee met bestaande inhoud en/of processen in en naar de bucket',
+    toolingType: 'OPEX'
   },
   {
     id: 'showbucket',
@@ -311,6 +357,7 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info:
       'Inhoud van de bucket raadplegen en tonen. Actie kan altijd opnieuw uitgevoerd worden',
+      toolingType: 'OPEX'
   },
   {
     id: 'upload2bucket',
@@ -319,6 +366,7 @@ export const stepDefinitions: Step[] = [
     description: 'BUCKET - upload',
     info: 'OPEX output verzenden naar bucket',
     allowRestart: true,
+    toolingType: 'OPEX'
   },
   {
     id: 'excelcreator',
@@ -327,14 +375,64 @@ export const stepDefinitions: Step[] = [
     description: 'MS Excel - Eindrapportage',
     allowRestart: true,
     info: 'De rapportage kan altijd opnieuw gemaakt worden',
+    toolingType: 'Rapportages'
+  },
+  {
+    id: 'unpack',
+    dependsOn: [],
+    actionName: 'UnpackTarHandler',
+    description: 'Archief uitpakken',
+    toolingType: 'ToPX2MDTO'
+  },
+  {
+    id: 'virusscan',
+    dependsOn: ['unpack'],
+    actionName: 'ScanVirusValidationHandler',
+    description: 'Viruscontrole',
+    allowRestart: true,
+    info:
+      'De viruscontrole kan altijd opnieuw worden uitgevoerd, en de Preservica ingest doet ook altijd een eigen controle',
+      toolingType: 'ToPX2MDTO'
+  },  
+  {
+    id: 'prewash',
+    dependsOn: ['unpack'],
+    requiredSettings: ['prewash'],
+    actionName: 'PrewashHandler',
+    description: 'Voorbewerking',
+    allowRestart: true,
+    info:
+      'Optioneel: Zolang ToPX niet is omgezet naar MDTO kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
+      toolingType: 'ToPX2MDTO'
   },  
   {
     id: 'start_conversion',
     dependsOn: ['unpack'],
     actionName: 'ToPX2MDTOHandler',
-    description: 'ToPX metadata omzetten naar MDTO metadata',
-    allowRestart: true,
+    description: 'ToPX metadata omzetten naar MDTO metadata',    
     info: 'Omzetten gaat uit van ToPX versie 2.3.2 naar MDTO versie 1.0',
+    toolingType: 'ToPX2MDTO'
+  },
+  {
+    id: 'profiling',
+    dependsOn: ['unpack'],
+    // TODO Do we still need the old name in the action results?
+    actionName: 'ProfilesHandler',
+    description: 'DROID - bestandsclassificatie voorbereiden',
+    // Just in case excessive files, such as .DS_Store or Thumbs.db files, are removed and we want to validate again
+    allowRestart: true,
+    info:
+      'De classificatie kan meerdere keren worden uitgevoerd, bijvoorbeeld wanneer .DS_Store of Thumbs.db bestanden verwijderd zijn',
+      toolingType: 'ToPX2MDTO'
+  },
+  {
+    id: 'exporting',
+    dependsOn: ['profiling'],
+    actionName: 'ExportingHandler',
+    description: 'DROID - resultaten exporteren naar CSV',
+    // See comment above
+    allowRestart: true,
+    toolingType: 'ToPX2MDTO'
   },
   {
     id: 'update_fileformat',
@@ -343,6 +441,7 @@ export const stepDefinitions: Step[] = [
     description: 'MDTO bestandType bijwerken met PRONOM informatie',
     allowRestart: true,
     info: 'Alle metadatabestanden met bestandType bijwerken met PRONOM informatie',
+    toolingType: 'ToPX2MDTO'
   },
   {
     id: 'update_fixity',
@@ -351,6 +450,7 @@ export const stepDefinitions: Step[] = [
     description: 'MDTO bestandType fixity bijwerken (met SHA-256)',
     allowRestart: true,
     info: 'Alle metadatabestanden met bestandType bijwerken met checksum algoritme (SHA-256) en waarde',
+    toolingType: 'ToPX2MDTO'
   },
   {
     id: 'update_relationship',
@@ -359,6 +459,7 @@ export const stepDefinitions: Step[] = [
     description: 'MDTO relatie referenties bijwerken',
     allowRestart: true,
     info: 'Alle referenties (heeftRepresentatie, isOnderdeelVan, bevatOnderdeel, isRepresentatieVan) bijwerken in de huidige collectie',
+    toolingType: 'ToPX2MDTO'
   }
 ];
 
