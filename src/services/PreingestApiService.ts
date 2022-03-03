@@ -370,15 +370,6 @@ export const stepDefinitions: Step[] = [
     toolingType: 'OPEX'
   },
   {
-    id: 'excelcreator',
-    dependsOn: [],
-    actionName: 'ExcelCreatorHandler',
-    description: 'MS Excel - Eindrapportage',
-    allowRestart: true,
-    info: 'De rapportage kan altijd opnieuw gemaakt worden',
-    toolingType: 'Rapportages'
-  },
-  {
     id: 'unpack',
     dependsOn: [],
     actionName: 'UnpackTarHandler',
@@ -461,7 +452,57 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info: 'Alle referenties (heeftRepresentatie, isOnderdeelVan, bevatOnderdeel, isRepresentatieVan) bijwerken in de huidige collectie',
     toolingType: 'ToPX2MDTO'
-  }
+  },
+    
+  {
+    id: 'indexing',
+    dependsOn: ['unpack'],
+    requiredSettings: ['schemaToValidate'],
+    actionName: 'IndexMetadataHandler',
+    description: 'MS Excel - Metadatabestanden indexeren',
+    allowRestart: true,
+    info: 'MS Excel overzicht kan altijd opnieuw gemaakt worden',
+    toolingType: 'Rapportages'
+  },
+  {
+    id: 'profiling',
+    dependsOn: ['unpack'],
+    // TODO Do we still need the old name in the action results?
+    actionName: 'ProfilesHandler',
+    description: 'DROID - bestandsclassificatie voorbereiden',
+    // Just in case excessive files, such as .DS_Store or Thumbs.db files, are removed and we want to validate again
+    allowRestart: true,
+    info:
+      'De classificatie kan meerdere keren worden uitgevoerd, bijvoorbeeld wanneer .DS_Store of Thumbs.db bestanden verwijderd zijn',
+      toolingType: 'Rapportages'
+  },
+  {
+    id: 'exporting',
+    dependsOn: ['profiling'],
+    actionName: 'ExportingHandler',
+    description: 'DROID - resultaten exporteren naar CSV',
+    // See comment above
+    allowRestart: true,
+    toolingType: 'Rapportages'
+  },
+  {
+    id: 'reporting/pdf',
+    dependsOn: ['profiling'],
+    actionName: 'ReportingPdfHandler',
+    description: 'DROID - PDF-rapportage',
+    // See comment above
+    allowRestart: true,
+    toolingType: 'Rapportages'
+  },
+  {
+    id: 'excelcreator',
+    dependsOn: [],
+    actionName: 'ExcelCreatorHandler',
+    description: 'MS Excel - Eindrapportage',
+    allowRestart: true,
+    info: 'De rapportage kan altijd opnieuw gemaakt worden',
+    toolingType: 'Rapportages'
+  },
 ];
 
 export type Settings = { 
