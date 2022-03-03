@@ -235,7 +235,7 @@ export const stepDefinitions: Step[] = [
     dependsOn: ['unpack'],
     actionName: 'NamingValidationHandler',
     allowRestart: true,
-    description: 'Bestandsnamen controleren',
+    description: 'Bestands- en mapnamen controleren',
     toolingType: 'Preingest'
   },
   {
@@ -254,6 +254,7 @@ export const stepDefinitions: Step[] = [
     description: 'Encoding metadatabestanden controleren',
     // See comment above
     allowRestart: true,
+    toolingType: 'Preingest'
   }, 
   {
     id: 'validate',
