@@ -299,27 +299,6 @@ export const stepDefinitions: Step[] = [
     actionName: 'UnpackTarHandler',
     description: 'Archief uitpakken',
     toolingType: 'OPEX'
-  }, 
-  {
-    id: 'virusscan',
-    dependsOn: ['unpack'],
-    actionName: 'ScanVirusValidationHandler',
-    description: 'Viruscontrole',
-    allowRestart: true,
-    info:
-      'De viruscontrole kan altijd opnieuw worden uitgevoerd, en de Preservica ingest doet ook altijd een eigen controle',
-      toolingType: 'OPEX'
-  },
-  {
-    id: 'prewash',
-    dependsOn: ['unpack'],
-    requiredSettings: ['prewash'],
-    actionName: 'PrewashHandler',
-    description: 'Voorbewerking',
-    allowRestart: true,
-    info:
-      'Optioneel: Zolang ToPX of MDTO niet is omgezet naar Opex kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
-      toolingType: 'OPEX'
   },
   {
     id: 'buildopex',
@@ -377,27 +356,6 @@ export const stepDefinitions: Step[] = [
     toolingType: 'ToPX2MDTO'
   },
   {
-    id: 'virusscan',
-    dependsOn: ['unpack'],
-    actionName: 'ScanVirusValidationHandler',
-    description: 'Viruscontrole',
-    allowRestart: true,
-    info:
-      'De viruscontrole kan altijd opnieuw worden uitgevoerd, en de Preservica ingest doet ook altijd een eigen controle',
-      toolingType: 'ToPX2MDTO'
-  },  
-  {
-    id: 'prewash',
-    dependsOn: ['unpack'],
-    requiredSettings: ['prewash'],
-    actionName: 'PrewashHandler',
-    description: 'Voorbewerking',
-    allowRestart: true,
-    info:
-      'Optioneel: Zolang ToPX niet is omgezet naar MDTO kan de voorbewerking meerdere keren worden uitgevoerd, ook met verschillende instellingen',
-      toolingType: 'ToPX2MDTO'
-  },  
-  {
     id: 'start_conversion',
     dependsOn: ['unpack'],
     actionName: 'ToPX2MDTOHandler',
@@ -452,8 +410,7 @@ export const stepDefinitions: Step[] = [
     allowRestart: true,
     info: 'Alle referenties (heeftRepresentatie, isOnderdeelVan, bevatOnderdeel, isRepresentatieVan) bijwerken in de huidige collectie',
     toolingType: 'ToPX2MDTO'
-  },
-    
+  },    
   {
     id: 'indexing',
     dependsOn: ['unpack'],

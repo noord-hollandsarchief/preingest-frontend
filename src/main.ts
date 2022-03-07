@@ -23,6 +23,8 @@ import Toolbar from 'primevue/toolbar';
 import Tooltip from 'primevue/tooltip';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
+import Tree from 'primevue/tree';
+import ProgressSpinner from 'primevue/progressspinner';
 import App from './App.vue';
 import router from './router';
 import store from './store';
@@ -61,7 +63,8 @@ app.component('Toolbar', Toolbar);
 app.component('Toast', Toast);
 app.component('TabView', TabView);
 app.component('TabPanel', TabPanel);
-
+app.component('Tree', Tree);
+app.component('ProgressSpinner', ProgressSpinner);
 app.directive('tooltip', Tooltip);
 
 app.mount('#app');
