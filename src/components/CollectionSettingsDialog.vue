@@ -147,21 +147,6 @@
           </div>
         </Divider>
         <div class="p-fluid p-formgrid p-grid">
-          <div :class="settingClass('schemaToValidate')" class="p-field p-col-3 p-md-6">
-            <label for="schemaToValidate" v-tooltip.right="'Kies een XSD schema om te valideren'"
-              >Validatie schema</label
-            >
-            <Dropdown
-              id="schemaToValidate"
-              v-model="settings.schemaToValidate"
-              :options="schemas"
-              :optionLabel="(name) => name.replace(/_/g, ' ')"
-              :filter="true"
-              filterPlaceholder="zoek schema"
-              placeholder="maak een keuze"
-              :showClear="true"
-            />
-          </div>
           <div :class="settingClass('ignoreValidation')" class="p-field p-col-3 p-md-6">
             <label
               for="ignoreValidation"
@@ -177,6 +162,25 @@
               :optionLabel="(name) => name.replace(/_/g, ' ')"
               :filter="true"
               filterPlaceholder="zoek script"
+              placeholder="maak een keuze"
+              :showClear="true"
+            />
+          </div>
+          <div
+            v-if="settings.ignoreValidation == 'Nee'"
+            :class="settingClass('schemaToValidate')"
+            class="p-field p-col-3 p-md-6"
+          >
+            <label for="schemaToValidate" v-tooltip.right="'Kies een XSD schema om te valideren'"
+              >Validatie schema</label
+            >
+            <Dropdown
+              id="schemaToValidate"
+              v-model="settings.schemaToValidate"
+              :options="schemas"
+              :optionLabel="(name) => name.replace(/_/g, ' ')"
+              :filter="true"
+              filterPlaceholder="zoek schema"
               placeholder="maak een keuze"
               :showClear="true"
             />
@@ -358,7 +362,6 @@ export default defineComponent({
     async save() {
       this.saving = true;
       const result = await this.api.saveSettings(this.collection.sessionId, this.settings);
-
       // TODO trim values
 
       // The API handles this like any other action: it reports it has accepted the request but may
