@@ -193,7 +193,7 @@ export const stepDefinitions: Step[] = [
   {
     id: 'indexing',
     dependsOn: ['unpack'],
-    requiredSettings: ['schemaToValidate'],
+    //requiredSettings: ['schemaToValidate'],
     actionName: 'IndexMetadataHandler',
     description: 'MS Excel - Metadatabestanden indexeren',
     allowRestart: true,
@@ -414,7 +414,7 @@ export const stepDefinitions: Step[] = [
   {
     id: 'indexing',
     dependsOn: ['unpack'],
-    requiredSettings: ['schemaToValidate'],
+    //requiredSettings: ['schemaToValidate'],
     actionName: 'IndexMetadataHandler',
     description: 'MS Excel - Metadatabestanden indexeren',
     allowRestart: true,
