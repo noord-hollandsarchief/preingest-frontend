@@ -29,14 +29,14 @@
               @click="checkSettingsAndRunSelectedSteps"
             />
             <div class="p-ml-auto">
-              <!--Button
+              <Button
                 v-if="collection.indexMetadataDownloadUrl"
                 :disabled="!collection.indexMetadataDownloadUrl"
                 label="Metadata overzicht"
                 icon="pi pi-file-excel"
                 class="p-button-secondary p-as-start p-mr-2"
                 @click="downloadIndexExcel"
-              /-->
+              />
               <Button
                 v-if="collection.excelCreatorDownloadUrl"
                 :disabled="!collection.excelCreatorDownloadUrl"
@@ -45,13 +45,13 @@
                 class="p-button-secondary p-as-start p-mr-2"
                 @click="downloadExcel"
               />
-              <!--Button
+              <Button
                 :disabled="collection.overallStatus === 'Running'"
                 label="Instellingen"
                 icon="pi pi-cog"
                 class="p-button-secondary p-as-start"
                 @click="editSettings"
-              /-->
+              />
             </div>
           </div>
         </template>
