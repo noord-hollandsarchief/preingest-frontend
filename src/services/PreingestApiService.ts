@@ -258,7 +258,7 @@ export const stepDefinitions: Step[] = [
     id: 'detection',
     dependsOn: ['exporting'],
     actionName: 'PasswordDetectionHandler',
-    description: 'Detecteren van bestanden met wachtwoord beveiliging',
+    description: 'Detecteren van bestanden met wachtwoordbeveiliging en macro\'s',
     info: 'Let op! Alleen bij Adobe PDF en MS Office documenten',
     allowRestart: true,
     toolingType: 'Preingest'
@@ -398,8 +398,8 @@ export const stepDefinitions: Step[] = [
     id: 'pronom',
     dependsOn: ['exporting'],
     actionName: 'BinaryFileMetadataMutationHandler',
-    description: 'Metadata (type bestand) bijwerken met PRONOM gegevens',
-    info: 'Metadata (type bestand) bijwerken met PRONOM gegevens. Bestaande gegevens worden overgeschreven. Fixity algoritme wordt standaard SHA-256 toegepast',
+    description: 'Metadatabestanden bijwerken met Pronom-gegevens en/of checksum',
+    info: 'Metadatabestanden bijwerken met Pronom-gegevens en/of checksum. Bestaande gegevens worden overgeschreven. Fixity algoritme wordt standaard SHA-256 toegepast',
     allowRestart: true,
     toolingType: 'Mutation'
   },
