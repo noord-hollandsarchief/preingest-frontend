@@ -475,7 +475,7 @@
           </DataTable>
         </div>
       </TabPanel>
-      <TabPanel header="Preservica">
+      <TabPanel header="e-Depot">
         <div class="card">
           <DataTable
             :value="steps.filter((d) => d.toolingType == 'Preservica')"
