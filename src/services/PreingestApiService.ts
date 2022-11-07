@@ -276,9 +276,18 @@ export const stepDefinitions: Step[] = [
     id: 'buildopex',
     dependsOn: ['unpack'],
     actionName: 'BuildOpexHandler',
-    description: 'OPEX - ToPX of MDTO omzetten naar OPEX',
+    description: 'SIP - ToPX of MDTO omzetten naar OPEX',
     info:
-      'Metadatabestanden omzetten naar OPEX, het resultaat wordt hiermee naar de bucket verstuurd voor ingest',
+      'Collectie met metadatabestanden omzetten naar OPEX, het resultaat wordt hiermee klaargezet om te versturen naar de bucket voor ingest',
+      toolingType: 'Preservica'
+  },
+  {
+    id: 'buildnonmetadataopex',
+    dependsOn: ['unpack'],
+    actionName: 'BuildNonMetadataOpexHandler',
+    description: 'SIP - Map inhoud (zonder metadatabestanden) omzetten naar OPEX',
+    info:
+      'Map inhoud (zonder metadatabestanden) omzetten naar OPEX, het resultaat wordt hiermee klaargezet om te versturen naar de bucket voor ingest',
       toolingType: 'Preservica'
   }, 
   {
