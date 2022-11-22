@@ -295,7 +295,7 @@ export const stepDefinitions: Step[] = [
     dependsOn: ['buildopex'],
     requiredSettings: ['polish'],
     actionName: 'PolishHandler',
-    description: 'OPEX - OPEX bestanden nabewerken d.m.v. XSL(T) transformatie.',
+    description: 'SIP - OPEX bestanden nabewerken d.m.v. XSL(T) transformatie.',
     allowRestart: true,
     info: 'Optioneel: OPEX bestanden ervoor nabewerken, voor het verzenden naar de bucket',
     toolingType: 'Preservica'
