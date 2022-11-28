@@ -13,16 +13,18 @@
 #     noordhollandsarchief/preingest-frontend:development
 
 # Temporary (partially cached) build image, specific version 3.10 only. Higher version gives us an error with Python while installing yarn. Need to investigate...
-FROM node:lts-alpine3.10 as build
+FROM node:16-alpine3.15 as build
 RUN apk update
 RUN apk add git
 RUN apk add dos2unix
+RUN apk add --update python3
+RUN apk --no-cache --update add build-base
 
 WORKDIR /app
 COPY package.json ./
 COPY yarn.lock ./
 RUN yarn install
-
+RUN npx update-browserslist-db@latest
 # To take advantage of caching until package.json or yarn.lock changes: only now copy
 # all else into the build image, and build.
 # See http://bitjudo.com/blog/2014/03/13/building-efficient-dockerfiles-node-dot-js/

@@ -176,7 +176,7 @@
 
             <Column :expander="true" headerStyle="width: 1rem" bodyStyle="padding: 0" />
 
-            <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+            <!--Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
             <Column field="description" header="Actie">
               <template #body="slotProps">
@@ -185,7 +185,7 @@
                   <i v-if="slotProps.data.info" class="pi pi-info-circle"></i>
                 </span>
               </template>
-            </Column>
+            </Column-->
 
             <Column
               field="lastStart"
