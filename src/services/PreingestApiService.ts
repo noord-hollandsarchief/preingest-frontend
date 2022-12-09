@@ -322,10 +322,19 @@ export const stepDefinitions: Step[] = [
   },
   {
     id: 'upload2bucket',
-    dependsOn: ['buildopex'],
+    dependsOn: [],
     actionName: 'UploadBucketHandler',
     description: 'BUCKET - upload',
     info: 'OPEX output verzenden naar bucket',
+    allowRestart: true,
+    toolingType: 'Preservica'
+  },
+  {
+    id: 'revert',
+    dependsOn: [],
+    actionName: 'RevertCollectionHandler',
+    description: 'DIP - ToPX/MDTO uit export e-Depot (Preservica) extraheren',
+    info: 'ToPX/MDTO uit export e-Depot (Preservica) extraheren',
     allowRestart: true,
     toolingType: 'Preservica'
   },
